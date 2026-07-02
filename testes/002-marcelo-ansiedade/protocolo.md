@@ -5,7 +5,7 @@
 - **ID:** 002
 - **Data:** 2026-07-02
 - **Responsável:** Marcelus Fernandes
-- **Status:** em execução
+- **Status:** concluído — ver [relatorio.md](relatorio.md)
 - **Execução:** workflow multi-agent (6 sessões paralelas + auditoria adversarial por sessão + síntese comparativa)
 
 ## 2. Pergunta de Pesquisa
