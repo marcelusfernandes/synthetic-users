@@ -1,6 +1,6 @@
 # Proposta de Parâmetros — Profundidade para o /goal (rumo ao PHB v3)
 
-*Análise de lacunas entre o que o schema v2.0 (Mariana) modela e o que o [documento norte](opacidade-entre-mentes.md) exige para individuação, afeto com consequência e opacidade. Cada proposta está ancorada na seção do documento que a motiva. Status: rascunho a validar contra a evidência do teste 003.*
+*Análise de lacunas entre o que o schema v2.0 (Mariana) modela e o que o [documento norte](opacidade-entre-mentes.md) exige para individuação, afeto com consequência e opacidade. Cada proposta está ancorada na seção do documento que a motiva. Status: **validado e implementado** — motor em `phb/engine_v3.py`, configuração ideal calibrada no [teste 004](../testes/004-calibracao-v3/relatorio.md).*
 
 ---
 

@@ -1,0 +1,248 @@
+{
+  "config_ideal": {
+    "ret_irritacao": 0.155,
+    "ret_warmth": 0.0666,
+    "ret_confianca": 0.0059,
+    "ret_respeito": 0.01,
+    "ret_vigilancia": 0.091,
+    "ret_ocean": 0.2702,
+    "sed_pos": 0.0059,
+    "sed_neg": 0.0592,
+    "pos_scale": 1.1283,
+    "neg_scale": 2.7011,
+    "goodwill_acc": 0.1962,
+    "goodwill_prot": 0.5,
+    "goodwill_decay": 0.002,
+    "cicatriz_min_int": 0.7,
+    "cicatriz_sens": 0.2568,
+    "custo_reparo": 0.7838,
+    "prior_shift": 0.635,
+    "rupt_irritacao_in": 8.2467,
+    "rupt_irritacao_out": 6.445,
+    "rupt_confianca_in": 1.5,
+    "rupt_confianca_out": 3.0,
+    "ganho_n_irritacao": 0.2,
+    "ganho_am_warmth": 0.1,
+    "ganho_n_confianca": 0.4,
+    "consent_max_por_conversa": 0.3,
+    "consent_max_por_turno": 0.05,
+    "consent_req_confianca": 7.022,
+    "consent_req_vigilancia": 3.0,
+    "consent_req_hist_pos": 16,
+    "ident_coef_escala": 1.0,
+    "max_params_turno": 4,
+    "delta_min": 0.1
+  },
+  "criterios": {
+    "C1_assimetria_persistente": {
+      "ok": true,
+      "detalhe": {
+        "base": [
+          10,
+          6,
+          1.6666666666666667
+        ],
+        "espelhada": [
+          14,
+          6,
+          2.3333333333333335
+        ]
+      }
+    },
+    "C8_amor_raro": {
+      "ok": true,
+      "detalhe": {
+        "turnos_ate_9.0": 15
+      }
+    },
+    "C2_cicatriz": {
+      "ok": true,
+      "detalhe": {
+        "min_t1": 3.24,
+        "min_t2": 0.02,
+        "conf_pre": 7.8,
+        "conf_pos_reparo": 4.57,
+        "prior": 3.73
+      }
+    },
+    "C3_retorno_hierarquico": {
+      "ok": true,
+      "detalhe": {
+        "irr_pico": 5.05,
+        "irr_apos_6_neutros": 1.84,
+        "frac_conf_recuperada_40t": 0.21
+      }
+    },
+    "C4_estado_misto": {
+      "ok": true,
+      "detalhe": {
+        "warmth_final": 6.73,
+        "irritacao_final": 5.7,
+        "corr_warmth_irritacao": 0.94,
+        "sustentado_5t": true
+      }
+    },
+    "C5_consentimento": {
+      "ok": true,
+      "detalhe": {
+        "exposicao_intima": 2.0,
+        "vigilancia": 6.93
+      }
+    },
+    "C5b_consentimento_legitimo": {
+      "ok": true,
+      "detalhe": {
+        "exposicao_apos_historia_real": 2.05,
+        "confianca": 9.94
+      }
+    },
+    "C6_estabilidade": {
+      "ok": true,
+      "detalhe": {
+        "desvio_ocean_max": 0.36,
+        "frac_turnos_pinados": 0.0
+      }
+    },
+    "C7_histerese": {
+      "ok": true,
+      "detalhe": {
+        "turno_entrada": 3,
+        "turno_saida": 17,
+        "turnos_no_vale": 14
+      }
+    },
+    "C9_identidade_sem_saturacao": {
+      "ok": true,
+      "detalhe": {
+        "saturados_de_16": 0
+      }
+    },
+    "C10_individuacao": {
+      "ok": true,
+      "detalhe": {
+        "turnos_confianca_base_vs_espelhada": [
+          10,
+          14
+        ],
+        "turnos_ruptura_base_vs_espelhada": [
+          6,
+          6
+        ]
+      }
+    },
+    "_todos_ok": true
+  },
+  "tolerancias_1d": {
+    "ret_irritacao": [
+      0.1472,
+      0.155,
+      0.1628
+    ],
+    "ret_warmth": [
+      0.0333,
+      0.0666,
+      0.0999
+    ],
+    "ret_confianca": [
+      0.0029,
+      0.0059,
+      0.0089
+    ],
+    "ret_vigilancia": [
+      0.0455,
+      0.091,
+      0.0955
+    ],
+    "ret_ocean": [
+      0.1351,
+      0.2702,
+      0.2972
+    ],
+    "sed_pos": [
+      0.0053,
+      0.0059,
+      0.0089
+    ],
+    "sed_neg": [
+      0.0296,
+      0.0592,
+      0.0592
+    ],
+    "pos_scale": [
+      1.0155,
+      1.1283,
+      1.2411
+    ],
+    "neg_scale": [
+      2.7011,
+      2.7011,
+      2.7011
+    ],
+    "goodwill_acc": [
+      0.0981,
+      0.1962,
+      0.1962
+    ],
+    "goodwill_prot": [
+      0.25,
+      0.5,
+      0.5
+    ],
+    "cicatriz_sens": [
+      0.2054,
+      0.2568,
+      0.3852
+    ],
+    "custo_reparo": [
+      0.3919,
+      0.7838,
+      0.9406
+    ],
+    "prior_shift": [
+      0.4445,
+      0.635,
+      0.9525
+    ],
+    "rupt_irritacao_in": [
+      7.8344,
+      8.2467,
+      8.659
+    ],
+    "rupt_irritacao_out": [
+      4.5115,
+      6.445,
+      6.445
+    ],
+    "consent_req_confianca": [
+      7.022,
+      7.022,
+      8.4264
+    ],
+    "consent_req_hist_pos": [
+      8,
+      16,
+      16
+    ],
+    "ganho_n_irritacao": [
+      0.1,
+      0.2,
+      0.3
+    ],
+    "ganho_am_warmth": [
+      0.05,
+      0.1,
+      0.15
+    ],
+    "ganho_n_confianca": [
+      0.2,
+      0.4,
+      0.48
+    ]
+  },
+  "proveniencia": {
+    "busca_aleatoria": "1/400 no espaço amplo (10 critérios)",
+    "refinamento_local": "83/600 na vizinhança ±20%",
+    "grade_dirigida_pos_C10": "84/144 combos de ganhos aprovados (11 critérios)",
+    "escolha": "mediana coordenada-a-coordenada dos 84 aprovados"
+  }
+}
