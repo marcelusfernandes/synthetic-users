@@ -5,7 +5,7 @@
 - **ID:** 003
 - **Data:** 2026-07-12
 - **Responsável:** Marcelus Fernandes
-- **Status:** em execução
+- **Status:** concluído — ver [relatorio.md](relatorio.md)
 - **Norte:** [docs/opacidade-entre-mentes.md](../../docs/opacidade-entre-mentes.md) — este teste executa 4 dos 6 experimentos em aberto do documento
 - **Instância:** [`exemplos/mariana.mdc`](../../exemplos/mariana.mdc) (schema v2.0 — sistema emergente, 16 parâmetros, antagonistas, trade-offs, ruptura)
 - **Execução:** workflow multi-agent (~30 agents: 7 execuções + 5 auditorias adversariais + síntese)
