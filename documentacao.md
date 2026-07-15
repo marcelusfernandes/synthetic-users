@@ -1,4 +1,6 @@
-# Usuários Sintéticos — Documentação do Sistema
+# Usuários Sintéticos — Documentação do Sistema (fundação v1/v2)
+
+> **Escopo:** este documento especifica a **fundação da metodologia PHB** — o sistema de arquétipos, camadas e a propagação OCEAN das versões 1 e 2. O motor **v3** preserva esta camada de identidade, mas **substitui a camada de dinâmica afetiva**: a matemática saiu do LLM e virou código determinístico, e o afeto passou a ser forkado por interlocutor. Para o estado atual, ver [`docs/funcionamento-v3.md`](docs/funcionamento-v3.md), [`docs/proposta-parametros-v3.md`](docs/proposta-parametros-v3.md) e [`docs/aprendizados-e-descobertas.md`](docs/aprendizados-e-descobertas.md).
 
 ## Visão Geral
 

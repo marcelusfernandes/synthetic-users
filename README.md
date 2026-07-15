@@ -1,8 +1,27 @@
-# Synthetic Users — PHB Framework
+# Synthetic Users — Research Tests Lab (PHB Framework)
 
-Usuários Sintéticos são representações simuladas de consumidores reais, operados por agents com **MCP (Model Context Protocol)**. São utilizados para testes de usabilidade, benchmark e entrevistas simuladas.
+Este repositório é um **laboratório de research tests** da metodologia **PHB (Parameterized Hierarchical Behavior Framework)**, apresentada no artigo [Synthetic Users: From static personas to emergent dynamic behavior](https://medium.com/design-bootcamp/synthetic-users-from-static-personas-to-emergent-dynamic-behavior-ae7237a8ae71) (Marcelus Fernandes, Bootcamp, jan/2026).
 
-Este repositório implementa o **Parameterized Hierarchical Behavior Framework (PHB)**, apresentado no artigo [Synthetic Users: From static personas to emergent dynamic behavior](https://medium.com/design-bootcamp/synthetic-users-from-static-personas-to-emergent-dynamic-behavior-ae7237a8ae71) (Marcelus Fernandes, Bootcamp, jan/2026).
+Usuários Sintéticos são representações simuladas de consumidores reais, operados por agents com **MCP (Model Context Protocol)**. Aqui eles são usados em experimentos de pesquisa — testes de usabilidade, benchmarks e entrevistas simuladas — que investigam hipóteses de produto **e** validam a própria metodologia a cada teste (consistência, rastreabilidade, emergência). Ver [`testes/`](testes/) para o ciclo completo de experimento.
+
+## Estado atual — PHB v3 (motor determinístico)
+
+O projeto tem duas frentes:
+
+1. **Origem** — usuários sintéticos dinâmicos para pesquisa de produto/UX (o artigo acima).
+2. **/goal atual** — [`docs/opacidade-entre-mentes.md`](docs/opacidade-entre-mentes.md): individuação, afeto com consequência e **opacidade entre mentes** — um sistema cujo estado interno é real, multidimensional, path-dependent, fiel a si mesmo e opaco ao exterior.
+
+A grande virada desta linha de pesquisa foi **tirar a matemática do LLM**. Depois que os testes 002 e 003 mostraram que fórmulas rodando dentro do prompt produziam deriva, colinearidade e artefatos semânticos (um pedido de desculpas que *esfriava* a relação), o comportamento passou a ser calculado por um **motor determinístico** ([`phb/engine_v3.py`](phb/engine_v3.py)):
+
+```
+mensagem → ① LLM interpreta em EVENTOS (só semântica + intensidade)
+         → ② MOTOR calcula o estado (determinístico, auditável)
+         → ③ LLM narra a resposta, fiel ao snapshot
+```
+
+O motor implementa afeto **forkado por interlocutor** (warmth, confiança, respeito, irritação, vigilância + goodwill + cicatrizes), força de retorno por canal, histerese de ruptura e consentimento formal. Está **calibrado** (11/11 critérios, [`phb/config_v3_ideal.json`](phb/config_v3_ideal.json)) e **validado em produção** (teste 005). Ver [`docs/funcionamento-v3.md`](docs/funcionamento-v3.md) para o guia técnico, [`docs/pipeline-phb-v3.html`](docs/pipeline-phb-v3.html) para o pipeline visual e [`docs/aprendizados-e-descobertas.md`](docs/aprendizados-e-descobertas.md) para a jornada completa.
+
+> As seções abaixo descrevem a **fundação da metodologia** (schema v1/v2), que o motor v3 preserva como camada de identidade e evolui na camada de dinâmica afetiva.
 
 ## Por que PHB?
 
@@ -46,24 +65,58 @@ A consistência entre as três camadas valida se o agente opera dentro dos parâ
 ## Estrutura do repositório
 
 ```
-├── documentacao.md          # Especificação completa do sistema
+├── documentacao.md          # Especificação completa do sistema (v1/v2)
+├── phb/                     # Motor v3 determinístico
+│   ├── engine_v3.py         #   step(): estado afetivo por interlocutor
+│   ├── config_v3_ideal.json #   hiperparâmetros calibrados (11/11 critérios)
+│   ├── calibrar_v3.py       #   bateria de critérios + busca
+│   ├── run_turn.py          #   interface LLM ↔ motor (CLI)
+│   └── test_engine_v3.py    #   suíte de testes (14/14)
+├── docs/                    # Documento norte, proposta v3, guias e pipeline visual
 ├── arquetipos/              # 7 arquétipos com parâmetros e specs de decisão
 ├── pesquisas/               # Entrevistas reais (canon/guardrails) por arquétipo
 ├── padroes_compra/          # Reposição, Abastecimento, Ocasião, Indulgência
 ├── modificadores/           # Sazonais, eventos de vida, contexto social
 ├── dual_class/              # Gatilhos e regras de transição entre arquétipos
-└── exemplos/                # Instâncias executáveis (.mdc) — ex.: Marcelo, baixa digitalização
+├── exemplos/                # Instâncias .mdc — Marcelo (v1), Mariana (v2 e v3)
+└── testes/                  # Research tests: protocolos, sessões e relatórios
+    ├── templates/           # Modelos de protocolo, sessão e relatório
+    └── 00N-.../             # Um diretório por experimento (001 … 005)
 ```
+
+## Rodar e validar o motor v3
+
+```bash
+python3 phb/test_engine_v3.py       # 14/14 testes (unitários + regressão dos critérios)
+python3 phb/calibrar_v3.py --check   # 11/11 critérios de aceitação na config ideal
+python3 phb/run_turn.py --catalogo   # lista os eventos que o LLM pode emitir
+
+# operar um turno:
+python3 phb/run_turn.py --estado sessao.json --init
+python3 phb/run_turn.py --estado sessao.json --quem dan \
+  --eventos '[{"tipo":"elogio_especifico","intensidade":0.6}]'
+```
+
+## Como rodar um research test
+
+1. **Protocolo** — copie `testes/templates/protocolo.md`, declare hipóteses e escolha instâncias (pré-registro antes de executar)
+2. **Execução** — rode sessões turno a turno registrando o output obrigatório das 3 camadas (`testes/templates/sessao.md`)
+3. **Auditoria** — valide a consistência Reasoning × Externalização × Ação em cada turno
+4. **Relatório** — classifique achados em Confirmação, **Emergência** (vira hipótese para validar com usuários reais) ou **Violação** (bug de simulação) — `testes/templates/relatorio.md`
+
+O teste [`001-marcelo-compra-presente`](testes/001-marcelo-compra-presente/) serve de exemplo preenchido.
 
 ## Instâncias executáveis
 
-Instâncias concretas vivem em [`exemplos/`](exemplos/) no formato `.mdc` (schema PHB v1.0). A personalidade é modelada via **OCEAN (Big Five)** e a mecânica central é:
+Instâncias concretas vivem em [`exemplos/`](exemplos/) no formato `.mdc`, uma por versão de schema — Marcelo (v1), Mariana (v2) e Mariana v3. Ver [`exemplos/README.md`](exemplos/README.md) para a tabela completa.
+
+Nas **v1/v2**, a personalidade é modelada via OCEAN (Big Five) e a propagação roda dentro do LLM, com um output estruturado por turno (contexto interpretado → cálculos OCEAN → propagação → comportamento → narrativa):
 
 ```
 Contexto afeta OCEAN → OCEAN modula parâmetros → Comportamento emerge
 ```
 
-Cada turno de simulação produz um output estruturado obrigatório (contexto interpretado → cálculos OCEAN → propagação para parâmetros → comportamento → narrativa), preservando a cadeia de causalidade auditável.
+Na **v3**, o LLM só interpreta a mensagem em eventos e narra a resposta — o cálculo do estado é do motor determinístico (ver [Estado atual — PHB v3](#estado-atual--phb-v3-motor-determinístico) acima). Em ambos os casos, a cadeia causal permanece auditável.
 
 ## Limitações reconhecidas
 
