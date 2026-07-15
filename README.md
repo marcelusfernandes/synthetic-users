@@ -108,13 +108,15 @@ O teste [`001-marcelo-compra-presente`](testes/001-marcelo-compra-presente/) ser
 
 ## Instâncias executáveis
 
-Instâncias concretas vivem em [`exemplos/`](exemplos/) no formato `.mdc` (schema PHB v1.0). A personalidade é modelada via **OCEAN (Big Five)** e a mecânica central é:
+Instâncias concretas vivem em [`exemplos/`](exemplos/) no formato `.mdc`, uma por versão de schema — Marcelo (v1), Mariana (v2) e Mariana v3. Ver [`exemplos/README.md`](exemplos/README.md) para a tabela completa.
+
+Nas **v1/v2**, a personalidade é modelada via OCEAN (Big Five) e a propagação roda dentro do LLM, com um output estruturado por turno (contexto interpretado → cálculos OCEAN → propagação → comportamento → narrativa):
 
 ```
 Contexto afeta OCEAN → OCEAN modula parâmetros → Comportamento emerge
 ```
 
-Cada turno de simulação produz um output estruturado obrigatório (contexto interpretado → cálculos OCEAN → propagação para parâmetros → comportamento → narrativa), preservando a cadeia de causalidade auditável.
+Na **v3**, o LLM só interpreta a mensagem em eventos e narra a resposta — o cálculo do estado é do motor determinístico (ver [Estado atual — PHB v3](#estado-atual--phb-v3-motor-determinístico) acima). Em ambos os casos, a cadeia causal permanece auditável.
 
 ## Limitações reconhecidas
 
