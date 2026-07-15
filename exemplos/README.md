@@ -1,10 +1,20 @@
 # Exemplos de Instâncias
 
-Instâncias executáveis de usuários sintéticos no formato PHB (`.mdc`). Uma instância é o resultado do processo de construção descrito em [`documentacao.md`](../documentacao.md): arquétipo + personalidade + parâmetros calibrados + contrato de execução, pronta para ser operada por um agent.
+Instâncias executáveis de usuários sintéticos no formato PHB (`.mdc`). Uma instância é o resultado do processo de construção descrito em [`documentacao.md`](../documentacao.md): arquétipo + personalidade + parâmetros + contrato de execução, pronta para ser operada por um agent.
 
-## Exemplo: Marcelo — Baixa Digitalização ([marcelorj.mdc](marcelorj.mdc))
+## Instâncias por versão de schema
 
-Usuário sintético básico com **um parâmetro de comportamento** (`digitalizacao`), demonstrando a mecânica central do framework:
+| Instância | Schema | Onde a matemática roda | Descrição |
+|---|---|---|---|
+| [`marcelorj.mdc`](marcelorj.mdc) | v1.0 | no LLM | Marcelo, baixa digitalização — 1 parâmetro (caso didático) |
+| [`mariana.mdc`](mariana.mdc) | v2.0 | no LLM | Mariana, influenciadora Quiet Luxury — 16 parâmetros, antagonistas, trade-offs, ruptura |
+| [`mariana_v3.mdc`](mariana_v3.mdc) | v3.0 | **no motor** (`../phb/`) | Mariana v3 — afeto forkado por interlocutor; o LLM só interpreta eventos e narra |
+
+> **Mudança de arquitetura (v3):** nas v1/v2 a fórmula de propagação roda dentro do prompt do LLM. Na v3 o LLM só classifica a mensagem em eventos e narra a resposta; **quem calcula o estado é o motor determinístico** ([`../phb/engine_v3.py`](../phb/engine_v3.py)). Ver [`../docs/funcionamento-v3.md`](../docs/funcionamento-v3.md). As seções abaixo descrevem a mecânica **v1/v2**, ainda usada por Marcelo e pela Mariana v2.
+
+## Exemplo v1: Marcelo — Baixa Digitalização ([marcelorj.mdc](marcelorj.mdc))
+
+Usuário sintético básico com **um parâmetro de comportamento** (`digitalizacao`), demonstrando a mecânica das versões 1 e 2:
 
 ```
 Contexto afeta OCEAN → OCEAN modula parâmetros → Comportamento emerge
