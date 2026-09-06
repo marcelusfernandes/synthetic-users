@@ -68,7 +68,7 @@ class Handler(BaseHTTPRequestHandler):
         try:
             return json.loads(bruto)
         except json.JSONDecodeError:
-            raise ValueError("JSON inválido")
+            raise validacao.ErroDeValidacao("JSON inválido")
 
     def log_message(self, formato, *args):  # silencia o log de acesso padrão
         pass
@@ -90,7 +90,7 @@ class Handler(BaseHTTPRequestHandler):
             self._rotear_post(caminho)
         except store.IdInvalido:
             self._erro(404, "não encontrado")
-        except ValueError as e:
+        except validacao.ErroDeValidacao as e:
             self._erro(400, str(e))
         except Exception:
             self._erro_interno()
@@ -184,10 +184,10 @@ class Handler(BaseHTTPRequestHandler):
     def _criar_sessao(self) -> None:
         dados = self._ler_corpo_json()
         if not isinstance(dados, dict):
-            raise ValueError("corpo inválido: esperado um objeto JSON")
+            raise validacao.ErroDeValidacao("corpo inválido: esperado um objeto JSON")
         persona_id = str(dados.get("persona_id") or "").strip()
         if not persona_id:
-            raise ValueError("persona_id não pode ser vazio")
+            raise validacao.ErroDeValidacao("persona_id não pode ser vazio")
 
         dados_dir = self._dados_dir()
         persona = store.carregar_persona(dados_dir, persona_id)

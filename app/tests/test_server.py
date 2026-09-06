@@ -223,6 +223,56 @@ class TestSessoesETurnos(ServidorTestCase):
         )
         self.assertEqual(status, 404)
 
+    def test_persona_ocean_base_usado_no_snapshot(self):
+        """Mata a mutação que faz `novo_estado` ignorar `ocean_base`: sem
+        repassar o `ocean_base` da persona ao motor, o neuroticismo do
+        snapshot seria o setpoint da Mariana (3.0), não o da persona (9.0).
+        `relacoes` vem vazio antes do primeiro turno (AC3), então a
+        checagem é feita no snapshot devolvido pelo turno, não antes dele."""
+        _, persona = self._criar_persona("Neurótica", ocean={
+            "abertura": 5.0, "conscienciosidade": 5.0, "extroversao": 5.0,
+            "amabilidade": 5.0, "neuroticismo": 9.0,
+        })
+        _, sessao = self._post("/api/sessoes", {"persona_id": persona["id"]})[:2]
+        status, turno, _ = self._post(
+            f"/api/sessoes/{sessao['id']}/turno",
+            {"quem": "dan", "eventos": [{"tipo": "elogio_especifico", "intensidade": 0.6}]},
+        )
+        self.assertEqual(status, 200)
+        self.assertAlmostEqual(turno["snapshot"]["ocean"]["neuroticismo"], 9.0, delta=0.5)
+
+    def test_sessao_arquivo_corrompido_retorna_500_sem_stack_no_corpo(self):
+        """`json.JSONDecodeError` é subclasse de `ValueError`; um arquivo de
+        sessão corrompido não pode virar 400 (isso não é erro do cliente
+        que chamou /turno) — tem que cair no caminho de 500."""
+        _, persona = self._criar_persona("Sessão Corrompida")
+        _, sessao = self._post("/api/sessoes", {"persona_id": persona["id"]})[:2]
+        caminho = os.path.join(self.tmp_dir, "sessoes", f"{sessao['id']}.json")
+        with open(caminho, "w") as f:
+            f.write("isto não é json{{{")
+
+        status, corpo, _ = self._post(
+            f"/api/sessoes/{sessao['id']}/turno",
+            {"quem": "dan", "eventos": [{"tipo": "elogio_especifico", "intensidade": 0.5}]},
+        )
+        self.assertEqual(status, 500)
+        self.assertIn("erro", corpo)
+        self.assertNotIn("Traceback", corpo["erro"])
+        self.assertNotIn('File "', corpo["erro"])
+
+    def test_persona_arquivo_corrompido_ao_criar_sessao_500(self):
+        """Mesmo caso do teste acima, mas para uma persona corrompida lida
+        em POST /api/sessoes."""
+        _, persona = self._criar_persona("Persona Corrompida")
+        caminho = os.path.join(self.tmp_dir, "personas", f"{persona['id']}.json")
+        with open(caminho, "w") as f:
+            f.write("{ nao fecha")
+
+        status, corpo, _ = self._post("/api/sessoes", {"persona_id": persona["id"]})
+        self.assertEqual(status, 500)
+        self.assertIn("erro", corpo)
+        self.assertNotIn("Traceback", corpo["erro"])
+
 
 class TestConfigECatalogo(ServidorTestCase):
     def test_config(self):
