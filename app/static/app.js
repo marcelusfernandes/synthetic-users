@@ -220,6 +220,12 @@ function lerEventosSelecionados() {
   return selecionados;
 }
 
+function desmarcarEventosCatalogo() {
+  for (const evento of estado.catalogo) {
+    document.getElementById("evento-" + evento.tipo).checked = false;
+  }
+}
+
 async function onSubmitTurno(evento) {
   evento.preventDefault();
   mostrarErro("turno-erro", "");
@@ -238,6 +244,7 @@ async function onSubmitTurno(evento) {
     mostrarErro("turno-erro", (corpo && corpo.erro) || "erro ao rodar turno");
     return;
   }
+  desmarcarEventosCatalogo();
   await carregarSessoes();
   await selecionarSessao(estado.sessaoSelecionadaId);
   estado.interlocutorSelecionado = quem;

@@ -181,6 +181,7 @@ button:disabled {
 }
 
 .barra-preenchida {
+  display: block;
   background: #6a5aa8;
   height: 100%;
 }
