@@ -1,2 +1,7 @@
 __pycache__/
 *.pyc
+
+# agent loop
+.claude/worktrees/
+# runtime data of the front (sessions are per-run state)
+sessoes/

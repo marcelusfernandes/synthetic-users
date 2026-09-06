@@ -1,0 +1,18 @@
+# test — the project's own test workflow; `make test` is the single entry point
+# (the agent loop's negative-control job detects the Makefile and runs the same command).
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: make test
