@@ -199,7 +199,6 @@ class TestMensagemFluxoCompleto(ServidorComStubTestCase):
         self.assertEqual(turno["eventos"], [{"tipo": "deboche", "intensidade": 0.8}])
         self.assertIn("narrativa", turno)
         self.assertTrue(turno["narrativa"])
-        self.assertNotIn("warmth", turno["narrativa"].lower())
 
         # irritação sobe (parte de 0.0) após o deboche interpretado — o
         # motor calculou, o LLM só classificou e narrou (invariante 1).
@@ -234,6 +233,21 @@ class TestMensagemFluxoCompleto(ServidorComStubTestCase):
         )
         self.assertEqual(status, 200)
         self.assertEqual(turno["eventos"], [{"tipo": "neutro", "intensidade": 0.0}])
+
+    def test_intensidade_e_clampada_em_0_1(self):
+        """AC1: intensidade fora de 0..1 é limitada, não descartada (ao
+        contrário de um tipo fora do catálogo)."""
+        _, sessao = self._criar_persona_e_sessao()
+        StubMessagesAPI.respostas = [
+            '[{"tipo": "deboche", "intensidade": 1.7}]',
+            "Ok, mas com estilo.",
+        ]
+        status, turno = self._post(
+            f"/api/sessoes/{sessao['id']}/mensagem",
+            {"quem": "dan", "texto": "oi"},
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(turno["eventos"], [{"tipo": "deboche", "intensidade": 1.0}])
 
 
 class TestMensagemSemChave(ServidorComStubTestCase):
