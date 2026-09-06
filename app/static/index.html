@@ -1,1 +1,120 @@
-<!doctype html><meta charset="utf-8"><title>PHB v3</title><p>front em construção</p>
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PHB v3 — Personas, Sessões e Turnos</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header>
+  <h1>PHB v3</h1>
+  <p>Criar personas, abrir sessões e rodar turnos sobre o motor determinístico.</p>
+</header>
+
+<main>
+  <section id="personas" aria-labelledby="personas-titulo">
+    <h2 id="personas-titulo">Personas</h2>
+
+    <ul id="personas-lista" class="lista"></ul>
+
+    <form id="form-persona">
+      <h3>Nova persona</h3>
+      <label>Nome
+        <input type="text" id="persona-nome" name="nome" required>
+      </label>
+      <label>Bio
+        <textarea id="persona-bio" name="bio" rows="2"></textarea>
+      </label>
+      <label>Voz
+        <input type="text" id="persona-voz" name="voz">
+      </label>
+
+      <fieldset>
+        <legend>Traços OCEAN (0–10)</legend>
+        <label>Abertura
+          <input type="range" id="persona-abertura" min="0" max="10" step="0.1" value="5">
+          <output for="persona-abertura" id="persona-abertura-valor">5.0</output>
+        </label>
+        <label>Conscienciosidade
+          <input type="range" id="persona-conscienciosidade" min="0" max="10" step="0.1" value="5">
+          <output for="persona-conscienciosidade" id="persona-conscienciosidade-valor">5.0</output>
+        </label>
+        <label>Extroversão
+          <input type="range" id="persona-extroversao" min="0" max="10" step="0.1" value="5">
+          <output for="persona-extroversao" id="persona-extroversao-valor">5.0</output>
+        </label>
+        <label>Amabilidade
+          <input type="range" id="persona-amabilidade" min="0" max="10" step="0.1" value="5">
+          <output for="persona-amabilidade" id="persona-amabilidade-valor">5.0</output>
+        </label>
+        <label>Neuroticismo
+          <input type="range" id="persona-neuroticismo" min="0" max="10" step="0.1" value="5">
+          <output for="persona-neuroticismo" id="persona-neuroticismo-valor">5.0</output>
+        </label>
+      </fieldset>
+
+      <button type="submit">Criar persona</button>
+      <p id="persona-erro" class="erro" hidden></p>
+    </form>
+  </section>
+
+  <section id="sessoes" aria-labelledby="sessoes-titulo">
+    <h2 id="sessoes-titulo">Sessões</h2>
+
+    <p>Persona selecionada: <strong id="sessoes-persona-nome">nenhuma</strong></p>
+    <button type="button" id="btn-nova-sessao" disabled>Nova sessão</button>
+    <p id="sessoes-erro" class="erro" hidden></p>
+
+    <ul id="sessoes-lista" class="lista"></ul>
+  </section>
+
+  <section id="turno" aria-labelledby="turno-titulo">
+    <h2 id="turno-titulo">Turno</h2>
+
+    <p>Sessão selecionada: <strong id="turno-sessao-nome">nenhuma</strong></p>
+
+    <form id="form-turno">
+      <label>Quem (interlocutor)
+        <input type="text" id="turno-quem" name="quem" placeholder="ex.: dan">
+      </label>
+
+      <fieldset>
+        <legend>Eventos do turno</legend>
+        <ul id="turno-catalogo" class="lista lista-catalogo"></ul>
+      </fieldset>
+
+      <button type="submit">Rodar turno</button>
+      <p id="turno-erro" class="erro" hidden></p>
+    </form>
+
+    <div id="turno-interlocutor-bloco" hidden>
+      <label>Ver relação com
+        <select id="turno-interlocutor"></select>
+      </label>
+    </div>
+
+    <div id="snapshot" aria-labelledby="snapshot-titulo">
+      <h3 id="snapshot-titulo">Snapshot</h3>
+      <p id="snapshot-vazio">Nenhum turno rodado ainda nesta sessão.</p>
+      <div id="snapshot-conteudo" hidden>
+        <h4>Relação</h4>
+        <ul id="snapshot-rel" class="lista-barras"></ul>
+        <h4>OCEAN</h4>
+        <ul id="snapshot-ocean" class="lista-barras"></ul>
+        <h4>Outros indicadores</h4>
+        <ul id="snapshot-outros" class="lista-barras"></ul>
+        <p id="snapshot-ruptura" class="marcador"></p>
+      </div>
+    </div>
+
+    <div id="historico" aria-labelledby="historico-titulo">
+      <h3 id="historico-titulo">Histórico de turnos</h3>
+      <ol id="historico-lista" class="lista"></ol>
+    </div>
+  </section>
+</main>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

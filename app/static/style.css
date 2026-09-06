@@ -1,0 +1,227 @@
+/* PHB v3 — estilos da página única. Layout empilhado por padrão (mobile
+   first, funciona a partir de 360px); vira grid de três colunas só a
+   partir de telas largas. Sem framework, sem build (CLAUDE.md, inv. 3). */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: #1a1a1a;
+  background: #f6f5f2;
+  line-height: 1.4;
+}
+
+header {
+  padding: 1rem;
+  background: #2b2440;
+  color: #fff;
+}
+
+header h1 {
+  margin: 0 0 0.25rem;
+  font-size: 1.25rem;
+}
+
+header p {
+  margin: 0;
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
+main {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+section {
+  background: #fff;
+  border: 1px solid #ddd8ce;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+section h2 {
+  margin-top: 0;
+  font-size: 1.05rem;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 0.4rem;
+}
+
+h3, h4 {
+  font-size: 0.95rem;
+  margin: 0.75rem 0 0.4rem;
+}
+
+form label {
+  display: block;
+  margin: 0.5rem 0;
+  font-size: 0.85rem;
+}
+
+input[type="text"],
+textarea,
+select {
+  width: 100%;
+  padding: 0.4rem;
+  font-size: 0.9rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  margin-top: 0.2rem;
+}
+
+input[type="range"] {
+  width: 80%;
+  vertical-align: middle;
+}
+
+output {
+  display: inline-block;
+  min-width: 2.5em;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+fieldset {
+  border: 1px solid #e2ddd2;
+  border-radius: 6px;
+  margin: 0.5rem 0;
+}
+
+legend {
+  font-size: 0.8rem;
+  color: #555;
+  padding: 0 0.3rem;
+}
+
+button {
+  margin-top: 0.6rem;
+  padding: 0.5rem 0.9rem;
+  font-size: 0.9rem;
+  border: none;
+  border-radius: 6px;
+  background: #4a3f78;
+  color: #fff;
+  cursor: pointer;
+}
+
+button:disabled {
+  background: #b7b2c6;
+  cursor: not-allowed;
+}
+
+.erro {
+  color: #a3231f;
+  font-size: 0.85rem;
+  margin: 0.4rem 0;
+}
+
+.lista {
+  list-style: none;
+  margin: 0.5rem 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.lista > li {
+  border: 1px solid #e6e2d8;
+  border-radius: 6px;
+  padding: 0.5rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  background: #fbfaf7;
+}
+
+.lista > li.selecionada {
+  border-color: #4a3f78;
+  background: #efecf9;
+}
+
+.lista-catalogo > li {
+  cursor: default;
+}
+
+.lista-catalogo label {
+  display: inline-block;
+  margin: 0 0.6rem 0.3rem 0;
+}
+
+.lista-catalogo input[type="range"] {
+  width: 6rem;
+}
+
+.lista-barras {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.barra-linha {
+  display: grid;
+  grid-template-columns: 8.5rem 1fr 2.5rem;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+}
+
+.barra-fundo {
+  background: #e9e5da;
+  border-radius: 4px;
+  height: 0.7rem;
+  overflow: hidden;
+}
+
+.barra-preenchida {
+  display: block;
+  background: #6a5aa8;
+  height: 100%;
+}
+
+.marcador {
+  font-weight: bold;
+  padding: 0.3rem 0.5rem;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.marcador.rompida {
+  background: #f6d3d1;
+  color: #7a1a15;
+}
+
+.marcador.integra {
+  background: #d9f2dc;
+  color: #1c5c25;
+}
+
+pre.log {
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: #f1efe9;
+  padding: 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  margin: 0.3rem 0 0;
+}
+
+/* a partir daqui as três áreas dividem a largura em vez de empilhar */
+@media (min-width: 900px) {
+  main {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
+  section {
+    flex: 1;
+    min-width: 0;
+  }
+}
