@@ -72,6 +72,13 @@ A consistência entre as três camadas valida se o agente opera dentro dos parâ
 │   ├── calibrar_v3.py       #   bateria de critérios + busca
 │   ├── run_turn.py          #   interface LLM ↔ motor (CLI)
 │   └── test_engine_v3.py    #   suíte de testes (14/14)
+├── app/                     # Front: servidor HTTP stdlib sobre o motor v3
+│   ├── server.py            #   `python3 -m app.server` — CLI + ThreadingHTTPServer
+│   ├── handler.py           #   rotas da API (personas, sessões, turnos, estáticos)
+│   ├── store.py             #   persistência em JSON (personas/, sessoes/)
+│   ├── static/               #   `index.html` (placeholder nesta issue)
+│   └── tests/                #   testes de integração (sobem o servidor real)
+├── personas/                # Personas v3 seed em JSON (ex.: mariana.json)
 ├── docs/                    # Documento norte, proposta v3, guias e pipeline visual
 ├── arquetipos/              # 7 arquétipos com parâmetros e specs de decisão
 ├── pesquisas/               # Entrevistas reais (canon/guardrails) por arquétipo
@@ -96,6 +103,34 @@ python3 phb/run_turn.py --estado sessao.json --init
 python3 phb/run_turn.py --estado sessao.json --quem dan \
   --eventos '[{"tipo":"elogio_especifico","intensidade":0.6}]'
 ```
+
+## Front (`app/`)
+
+Um servidor HTTP em Python stdlib (sem dependências, sem build) para criar
+personas, abrir sessões e rodar turnos num navegador — mesma matemática do
+motor v3, mesma identidade v2 por default (Mariana). Nesta issue a página
+servida em `/` é só um placeholder; a interface vem numa issue seguinte.
+
+```bash
+make run                      # sobe em http://localhost:8000 (dados: raiz do repo)
+python3 -m app.server --porta 0 --dados /tmp/dados-teste   # porta livre, dados isolados
+```
+
+Rotas:
+
+| Rota | Descrição |
+|---|---|
+| `GET /api/config` | `{"llm": false, "modelo": null}` (turno com LLM: issue futura) |
+| `GET /api/catalogo` | Eventos do motor (`tipo`, `eixos`, `valencia`) |
+| `GET /api/personas` · `POST /api/personas` | Lista/cria personas (`nome`, `bio`, `voz`, `ocean_base`) |
+| `GET /api/personas/{id}` | Uma persona |
+| `GET /api/sessoes` · `POST /api/sessoes` | Lista/abre sessões (`persona_id`) |
+| `GET /api/sessoes/{id}` | Persona, relações por interlocutor e turnos da sessão |
+| `POST /api/sessoes/{id}/turno` | Executa um turno (`quem`, `eventos`) via `engine_v3.step()` |
+| `GET /` · `GET /static/<arquivo>` | Página e estáticos de `app/static/` |
+
+Personas ficam em `personas/*.json` (versionadas — `mariana.json` é a seed);
+sessões ficam em `sessoes/*.json` (ignorado pelo git — estado de execução).
 
 ## Como rodar um research test
 

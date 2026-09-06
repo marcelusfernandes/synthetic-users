@@ -305,10 +305,25 @@ def step(estado: Estado, cfg: Config, quem: str, eventos: list):
     return log
 
 
-def novo_estado(n_base=3.0, am_base=6.0):
-    ob = {"abertura": 7.5, "conscienciosidade": 7.0, "extroversao": 7.5,
-          "amabilidade": am_base, "neuroticismo": n_base}
-    return Estado(ocean_base=dict(ob), ocean_atual=dict(ob), identidade=mariana_identidade())
+def novo_estado(n_base=3.0, am_base=6.0, ocean_base=None, identidade=None):
+    """Cria um Estado novo.
+
+    Sem argumentos, comportamento idêntico ao original (setpoints da
+    Mariana v2). `ocean_base`, quando informado, substitui o OCEAN base
+    padrão (uma cópia vai para `ocean_base`, outra para `ocean_atual`).
+    `identidade`, quando informada, substitui `mariana_identidade()`
+    (também copiada, para não compartilhar estado mutável com o chamador).
+    """
+    if ocean_base is None:
+        ob = {"abertura": 7.5, "conscienciosidade": 7.0, "extroversao": 7.5,
+              "amabilidade": am_base, "neuroticismo": n_base}
+    else:
+        ob = dict(ocean_base)
+    if identidade is None:
+        ident = mariana_identidade()
+    else:
+        ident = {k: dict(v) for k, v in identidade.items()}
+    return Estado(ocean_base=dict(ob), ocean_atual=dict(ob), identidade=ident)
 
 
 def snapshot(estado: Estado, quem: str):
