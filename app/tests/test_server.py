@@ -50,6 +50,8 @@ class ServidorTestCase(unittest.TestCase):
         except subprocess.TimeoutExpired:
             self.proc.kill()
             self.proc.wait(timeout=5)
+        self.proc.stdout.close()
+        self.proc.stderr.close()
         shutil.rmtree(self.tmp_dir, ignore_errors=True)
 
     def _request(self, method, path, corpo=None):
@@ -131,7 +133,7 @@ class TestPersonas(ServidorTestCase):
         self.assertIn("erro", corpo)
 
     def test_persona_nome_vazio_400(self):
-        status, corpo, _ = self._criar_persona(nome="   ")
+        status, corpo = self._criar_persona(nome="   ")
         self.assertEqual(status, 400)
         self.assertIn("erro", corpo)
 
