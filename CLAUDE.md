@@ -51,6 +51,8 @@ agent loop do plugin `agentic-setup` (issues → worktrees → PRs revisados →
 
 ## Workflow
 
-Uma issue por unidade de trabalho, uma worktree por agente. Branch `<type>/<n>-<slug>`;
-commit `test(red):` primeiro; PR com `Closes #N` em texto simples; o orquestrador mescla
-com checks verdes + `review:approved`. Templates de issue e PR em `.github/`.
+Quando a rota Claude for escolhida, seguir o fluxo legado: uma issue por unidade de
+trabalho, uma worktree por agente, branch `<type>/<n>-<slug>`, `test(red):` primeiro e PR
+com `Closes #N`. Para Codex, seguir `AGENTS.md`, `docs/codex.md` e a skill local; não rodar
+os dois orquestradores sobre as mesmas tarefas. Em qualquer rota, nunca fazer push direto
+na `main`, confundir revisão local com aprovação GitHub ou inferir permissão de merge.

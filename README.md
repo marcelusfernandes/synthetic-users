@@ -100,6 +100,10 @@ A consistência entre as três camadas valida se o agente opera dentro dos parâ
 adicionar, servidor real, nada mockado. É o mesmo comando que o CI e o
 `negative-control` do loop rodam.
 
+Para desenvolver este repositório com o loop Codex, consulte
+[`docs/codex.md`](docs/codex.md). O guia não inicia nem retoma objetivos automaticamente;
+cada execução depende do pedido e das permissões do objetivo no GitHub.
+
 ```bash
 make test                            # motor + app/tests
 
