@@ -1,30 +1,50 @@
 """
 Turno com LLM opcional — interpretar mensagem em eventos, narrar o snapshot.
 
-Só ativo quando `ANTHROPIC_API_KEY` está no ambiente do servidor; a chave é
-lida uma única vez, no import deste módulo, para uma variável privada, e
+O provedor é escolhido explicitamente por `PHB_LLM_PROVIDER` (`anthropic`,
+o default, ou `openrouter`). A chave correspondente é lida uma única vez,
+no import deste módulo, para uma variável privada, e
 nunca é escrita em log, arquivo, resposta ou mensagem de erro (CLAUDE.md,
 invariante 6). O LLM nunca calcula (invariante 1): `interpretar` só produz
 `{"tipo", "intensidade"}` do catálogo do motor; `narrar` só produz texto —
 o cálculo do estado é sempre `engine_v3.step()`.
 
-`urllib.request` (stdlib) contra a Messages API (`PHB_LLM_URL`, default
-`https://api.anthropic.com/v1/messages`; modelo `PHB_MODEL`, default
-`claude-sonnet-5`) — nenhuma dependência `pip` (invariante 3).
+`urllib.request` (stdlib) contra a API do provedor. `PHB_LLM_URL` pode
+sobrescrever o endpoint (inclusive em fixtures locais) — nenhuma dependência
+`pip` (invariante 3).
 """
+import http.client
 import json
 import os
 import re
 import urllib.error
 import urllib.request
 
-_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
-LLM_URL = os.environ.get("PHB_LLM_URL", "https://api.anthropic.com/v1/messages")
-MODELO = os.environ.get("PHB_MODEL", "claude-sonnet-5")
+PROVEDOR = os.environ.get("PHB_LLM_PROVIDER", "anthropic").strip().lower()
+_CHAVES = {
+    "anthropic": os.environ.get("ANTHROPIC_API_KEY"),
+    "openrouter": os.environ.get("OPENROUTER_API_KEY"),
+}
+_URLS = {
+    "anthropic": "https://api.anthropic.com/v1/messages",
+    "openrouter": "https://openrouter.ai/api/v1/chat/completions",
+}
+LLM_URL = os.environ.get("PHB_LLM_URL") or _URLS.get(PROVEDOR, "")
+MODELO = os.environ.get("PHB_MODEL") or ("claude-sonnet-5" if PROVEDOR == "anthropic" else "")
 
 _VERSAO_API = "2023-06-01"
-_TIMEOUT_SEGUNDOS = 60
-_MAX_TOKENS = 600
+
+
+def _inteiro_positivo(nome: str, default: int):
+    try:
+        valor = int(os.environ.get(nome, str(default)))
+    except ValueError:
+        return None
+    return valor if valor > 0 else None
+
+
+_TIMEOUT_SEGUNDOS = _inteiro_positivo("PHB_LLM_TIMEOUT", 60)
+_MAX_TOKENS = _inteiro_positivo("PHB_MAX_TOKENS", 600)
 
 _FENCE_ABRE_RE = re.compile(r"^```[a-zA-Z]*\n?")
 _FENCE_FECHA_RE = re.compile(r"```\s*$")
@@ -39,49 +59,71 @@ class LLMError(Exception):
 
 
 def esta_configurado() -> bool:
-    """`True` quando `ANTHROPIC_API_KEY` estava presente no ambiente no
-    momento em que este módulo foi importado."""
-    return bool(_API_KEY)
+    """`True` quando provedor, chave e modelo formam configuração válida."""
+    return (PROVEDOR in _CHAVES and bool(_CHAVES[PROVEDOR]) and bool(MODELO)
+            and _TIMEOUT_SEGUNDOS is not None and _MAX_TOKENS is not None)
+
+
+class _SemRedirect(urllib.request.HTTPRedirectHandler):
+    """Recusa redirects para nunca reenviar credenciais a outro destino."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
 
 
 def _chamar_llm(system: str, mensagem_usuario: str) -> str:
-    if not _API_KEY:
+    if not esta_configurado():
         raise LLMError("LLM não configurado")
 
-    corpo = json.dumps({
-        "model": MODELO,
-        "max_tokens": _MAX_TOKENS,
-        "system": system,
-        "messages": [{"role": "user", "content": mensagem_usuario}],
-    }).encode("utf-8")
+    if PROVEDOR == "anthropic":
+        payload_requisicao = {
+            "model": MODELO, "max_tokens": _MAX_TOKENS, "system": system,
+            "messages": [{"role": "user", "content": mensagem_usuario}],
+        }
+        headers = {
+            "x-api-key": _CHAVES[PROVEDOR],
+            "anthropic-version": _VERSAO_API,
+            "content-type": "application/json",
+        }
+    else:
+        payload_requisicao = {
+            "model": MODELO, "max_tokens": _MAX_TOKENS,
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": mensagem_usuario},
+            ],
+        }
+        headers = {
+            "Authorization": f"Bearer {_CHAVES[PROVEDOR]}",
+            "content-type": "application/json",
+        }
+    corpo = json.dumps(payload_requisicao).encode("utf-8")
 
     requisicao = urllib.request.Request(
         LLM_URL,
         data=corpo,
         method="POST",
-        headers={
-            "x-api-key": _API_KEY,
-            "anthropic-version": _VERSAO_API,
-            "content-type": "application/json",
-        },
+        headers=headers,
     )
     try:
-        with urllib.request.urlopen(requisicao, timeout=_TIMEOUT_SEGUNDOS) as resp:
+        opener = urllib.request.build_opener(_SemRedirect())
+        with opener.open(requisicao, timeout=_TIMEOUT_SEGUNDOS) as resp:
             payload = json.loads(resp.read().decode("utf-8"))
     except urllib.error.HTTPError as e:
-        e.read()  # drena o corpo do erro sem usá-lo — pode ecoar a chave enviada
-        raise LLMError(f"LLM respondeu com erro HTTP {e.code}") from None
-    except urllib.error.URLError:
-        raise LLMError("falha ao conectar ao LLM") from None
-    except TimeoutError:
-        raise LLMError("tempo esgotado ao chamar o LLM") from None
-    except json.JSONDecodeError:
-        raise LLMError("resposta do LLM não é JSON válido") from None
+        e.close()
+        raise LLMError("falha ao chamar o LLM") from None
+    except (urllib.error.URLError, TimeoutError, OSError, http.client.HTTPException,
+            json.JSONDecodeError, UnicodeDecodeError):
+        raise LLMError("falha ao chamar o LLM") from None
 
     try:
-        return payload["content"][0]["text"]
+        texto = (payload["content"][0]["text"] if PROVEDOR == "anthropic"
+                 else payload["choices"][0]["message"]["content"])
     except (KeyError, IndexError, TypeError):
-        raise LLMError("resposta do LLM em formato inesperado") from None
+        raise LLMError("falha ao chamar o LLM") from None
+    if not isinstance(texto, str) or not texto.strip():
+        raise LLMError("falha ao chamar o LLM")
+    return texto
 
 
 def _prompt_interpretar(persona: dict, catalogo: list, quem: str) -> str:

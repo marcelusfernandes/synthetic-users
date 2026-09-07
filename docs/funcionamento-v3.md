@@ -37,6 +37,12 @@ A v3 separa as responsabilidades:
 
 O LLM nunca decide números. O motor nunca escreve texto. A cadeia causal inteira fica auditável: qualquer fala pode ser rastreada até o evento que a causou.
 
+O transporte pode usar Anthropic (default) ou OpenRouter, escolhido explicitamente
+por `PHB_LLM_PROVIDER`. Cada provedor usa somente sua própria chave no servidor;
+OpenRouter também exige `PHB_MODEL`, enviado literalmente. Falhas HTTP, timeout ou
+respostas sem texto encerram o ciclo sem persistir um turno parcial. O endpoint pode
+ser substituído por `PHB_LLM_URL` para testes locais, sem alterar o motor.
+
 ---
 
 ## Os scripts construídos (`phb/`)
