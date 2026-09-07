@@ -10,14 +10,20 @@ agent loop do plugin `agentic-setup` (issues → worktrees → PRs revisados →
   e o que `app/` adicionar). CI (`.github/workflows/test.yml`) e o `negative-control` do
   loop rodam exatamente isto.
 - `python3 phb/run_turn.py --catalogo` — lista os eventos que o LLM pode emitir.
+- Variáveis de ambiente do front (`app/`): `ANTHROPIC_API_KEY` (opcional — liga o
+  turno com LLM), `PHB_MODEL` (default `claude-sonnet-5`), `PHB_LLM_URL` (default
+  `https://api.anthropic.com/v1/messages`).
 
 ## Mapa
 
 - `phb/` — `engine_v3.py` (estado + `step()`), `config_v3_ideal.json` (calibração),
   `run_turn.py` (CLI LLM ↔ motor), `calibrar_v3.py`, `test_engine_v3.py`.
-- `app/` — o front (servidor HTTP em Python stdlib + páginas estáticas) para criar
-  personas, abrir sessões e rodar turnos. `personas/` guarda as personas em JSON;
-  `sessoes/` (ignorado pelo git) guarda o estado de cada sessão.
+- `app/` — o front: `server.py` (CLI + `ThreadingHTTPServer`), `handler.py` (rotas de
+  personas, sessões, turnos e mensagem), `llm.py` (turno com LLM opcional — interpreta
+  em eventos, narra), `estatico.py` (serve `app/static/` com segurança), `store.py`
+  (persistência em JSON), `validacao.py` (valida payloads HTTP), `static/` (a página),
+  `tests/` (testes de integração, servidor real). `personas/` guarda as personas em
+  JSON; `sessoes/` (ignorado pelo git) guarda o estado de cada sessão.
 - `exemplos/`, `arquetipos/`, `padroes_compra/`, `modificadores/`, `dual_class/`,
   `pesquisas/` — a fundação da metodologia (v1/v2) em Markdown/`.mdc`.
 - `docs/` — documento norte, guia técnico v3, aprendizados. `testes/` — os experimentos.

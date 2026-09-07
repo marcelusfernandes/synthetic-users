@@ -19,7 +19,7 @@ mensagem → ① LLM interpreta em EVENTOS (só semântica + intensidade)
          → ③ LLM narra a resposta, fiel ao snapshot
 ```
 
-O motor implementa afeto **forkado por interlocutor** (warmth, confiança, respeito, irritação, vigilância + goodwill + cicatrizes), força de retorno por canal, histerese de ruptura e consentimento formal. Está **calibrado** (11/11 critérios, [`phb/config_v3_ideal.json`](phb/config_v3_ideal.json)) e **validado em produção** (teste 005). Ver [`docs/funcionamento-v3.md`](docs/funcionamento-v3.md) para o guia técnico, [`docs/pipeline-phb-v3.html`](docs/pipeline-phb-v3.html) para o pipeline visual e [`docs/aprendizados-e-descobertas.md`](docs/aprendizados-e-descobertas.md) para a jornada completa.
+O motor implementa afeto **forkado por interlocutor** (warmth, confiança, respeito, irritação, vigilância + goodwill + cicatrizes), força de retorno por canal, histerese de ruptura e consentimento formal. Está **calibrado** — `phb/test_engine_v3.py` valida 11/11 critérios de aceitação na config ideal ([`phb/config_v3_ideal.json`](phb/config_v3_ideal.json)) — e **validado em produção** (teste 005). Ver [`docs/funcionamento-v3.md`](docs/funcionamento-v3.md) para o guia técnico, [`docs/pipeline-phb-v3.html`](docs/pipeline-phb-v3.html) para o pipeline visual e [`docs/aprendizados-e-descobertas.md`](docs/aprendizados-e-descobertas.md) para a jornada completa.
 
 > As seções abaixo descrevem a **fundação da metodologia** (schema v1/v2), que o motor v3 preserva como camada de identidade e evolui na camada de dinâmica afetiva.
 
@@ -68,16 +68,19 @@ A consistência entre as três camadas valida se o agente opera dentro dos parâ
 ├── documentacao.md          # Especificação completa do sistema (v1/v2)
 ├── phb/                     # Motor v3 determinístico
 │   ├── engine_v3.py         #   step(): estado afetivo por interlocutor
-│   ├── config_v3_ideal.json #   hiperparâmetros calibrados (11/11 critérios)
+│   ├── config_v3_ideal.json #   hiperparâmetros calibrados (ver "Rodar e validar" abaixo)
 │   ├── calibrar_v3.py       #   bateria de critérios + busca
 │   ├── run_turn.py          #   interface LLM ↔ motor (CLI)
-│   └── test_engine_v3.py    #   suíte de testes (14/14)
+│   └── test_engine_v3.py    #   suíte de testes do motor (unitários + regressão)
 ├── app/                     # Front: servidor HTTP stdlib sobre o motor v3
 │   ├── server.py            #   `python3 -m app.server` — CLI + ThreadingHTTPServer
-│   ├── handler.py           #   rotas da API (personas, sessões, turnos, estáticos)
+│   ├── handler.py           #   rotas da API (personas, sessões, turnos, mensagem, estáticos)
+│   ├── llm.py               #   turno com LLM opcional (interpreta em eventos, narra)
+│   ├── estatico.py          #   resolve `app/static/` com segurança (mime por extensão)
 │   ├── store.py             #   persistência em JSON (personas/, sessoes/)
-│   ├── static/               #   `index.html` (placeholder nesta issue)
-│   └── tests/                #   testes de integração (sobem o servidor real)
+│   ├── validacao.py         #   valida payloads HTTP (persona, turno)
+│   ├── static/              #   index.html — três áreas: Personas, Sessões, Turno
+│   └── tests/               #   testes de integração (sobem o servidor real)
 ├── personas/                # Personas v3 seed em JSON (ex.: mariana.json)
 ├── docs/                    # Documento norte, proposta v3, guias e pipeline visual
 ├── arquetipos/              # 7 arquétipos com parâmetros e specs de decisão
@@ -93,9 +96,18 @@ A consistência entre as três camadas valida se o agente opera dentro dos parâ
 
 ## Rodar e validar o motor v3
 
+`make test` roda tudo — o motor (`phb/test_engine_v3.py`) e o que `app/tests`
+adicionar, servidor real, nada mockado. É o mesmo comando que o CI e o
+`negative-control` do loop rodam.
+
 ```bash
-python3 phb/test_engine_v3.py       # 14/14 testes (unitários + regressão dos critérios)
-python3 phb/calibrar_v3.py --check   # 11/11 critérios de aceitação na config ideal
+make test                            # motor + app/tests
+
+python3 phb/test_engine_v3.py        # só o motor: unitários + regressão dos 11
+                                      # critérios na config ideal (phb/config_v3_ideal.json)
+python3 phb/calibrar_v3.py --check   # valida a `Config` default (não a config ideal,
+                                      # ver phb/calibrar_v3.py:11) contra os mesmos
+                                      # critérios — hoje falha em C4_estado_misto
 python3 phb/run_turn.py --catalogo   # lista os eventos que o LLM pode emitir
 
 # operar um turno:
@@ -109,8 +121,9 @@ python3 phb/run_turn.py --estado sessao.json --quem dan \
 Um servidor HTTP em Python stdlib (sem dependências, sem build) para criar
 personas, abrir sessões e rodar turnos num navegador — mesma matemática do
 motor v3, mesma identidade v2 por default (Mariana). A página em `/` cobre
-as três áreas (personas, sessões, turno) e, com `ANTHROPIC_API_KEY` no
-ambiente, o turno com LLM (ver "Turno com LLM" abaixo).
+as três áreas — Personas, Sessões, Turno — no fluxo persona → sessão →
+turno, e, com `ANTHROPIC_API_KEY` no ambiente, o turno com LLM (ver "Turno
+com LLM" abaixo).
 
 ```bash
 make run                      # sobe em http://localhost:8000 (dados: raiz do repo)
@@ -129,7 +142,7 @@ Rotas:
 | `GET /api/sessoes/{id}` | Persona, relações por interlocutor e turnos da sessão |
 | `POST /api/sessoes/{id}/turno` | Executa um turno (`quem`, `eventos`) via `engine_v3.step()` |
 | `POST /api/sessoes/{id}/mensagem` | Turno com LLM: interpreta `texto` em eventos, roda `step()`, narra — ver "Turno com LLM" abaixo |
-| `GET /` · `GET /static/<arquivo>` | Página e estáticos de `app/static/` |
+| `GET /` · `GET /static/<arquivo>` | Página e estáticos de `app/static/` (`.js` como `application/javascript`) |
 
 Personas ficam em `personas/*.json` (versionadas — `mariana.json` é a seed);
 sessões ficam em `sessoes/*.json` (ignorado pelo git — estado de execução).
