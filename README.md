@@ -161,6 +161,9 @@ o front funciona exatamente como antes (eventos escolhidos à mão) e mostra
 uma nota explicando como habilitar; a chave nunca aparece em arquivo, log
 ou resposta HTTP.
 
+Respostas sem texto ou marcadas pelo OpenRouter como incompletas são tratadas como
+falha; o turno e seu estado não são persistidos parcialmente.
+
 Variáveis de ambiente:
 
 | Variável | Default | Descrição |

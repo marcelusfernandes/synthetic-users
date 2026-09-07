@@ -88,7 +88,9 @@ class StubMessagesAPI(BaseHTTPRequestHandler):
         else:
             texto = StubMessagesAPI.respostas.pop(0) if StubMessagesAPI.respostas else ""
             if pedido["headers"].get("authorization"):
-                resposta = {"choices": [{"message": {"content": texto}}]}
+                resposta = {"choices": [{
+                    "message": {"content": texto}, "finish_reason": "stop",
+                }]}
             else:
                 resposta = {"content": [{"type": "text", "text": texto}]}
             corpo = json.dumps(resposta).encode("utf-8")
@@ -361,6 +363,7 @@ class TestOpenRouter(ServidorComStubTestCase):
 
     def test_falha_na_segunda_chamada_nao_persiste_turno(self):
         _, sessao = self._criar_persona_e_sessao()
+        _, original = self._get(f"/api/sessoes/{sessao['id']}")
         StubMessagesAPI.respostas_brutas = [
             json.dumps({"choices": [{"message": {"content": '[{"tipo":"neutro","intensidade":0}]'}}]}).encode(),
             json.dumps({"choices": [{"message": {"content": "   "}}]}).encode(),
@@ -371,6 +374,28 @@ class TestOpenRouter(ServidorComStubTestCase):
         self.assertEqual((status, corpo), (502, {"erro": "falha ao chamar o LLM"}))
         _, salva = self._get(f"/api/sessoes/{sessao['id']}")
         self.assertEqual(salva["turnos"], [])
+        self.assertEqual(salva["relacoes"], original["relacoes"])
+
+    def test_narrativa_com_termino_incompleto_nao_e_persistida(self):
+        _, sessao = self._criar_persona_e_sessao()
+        _, original = self._get(f"/api/sessoes/{sessao['id']}")
+        StubMessagesAPI.respostas_brutas = [
+            json.dumps({"choices": [{
+                "message": {"content": '[{"tipo":"deboche","intensidade":0.8}]'},
+                "finish_reason": "stop",
+            }]}).encode(),
+            json.dumps({"choices": [{
+                "message": {"content": "Resposta truncada mas não vazia"},
+                "finish_reason": "length",
+            }]}).encode(),
+        ]
+        status, corpo = self._post(
+            f"/api/sessoes/{sessao['id']}/mensagem", {"quem": "dan", "texto": "oi"},
+        )
+        self.assertEqual((status, corpo), (502, {"erro": "falha ao chamar o LLM"}))
+        _, salva = self._get(f"/api/sessoes/{sessao['id']}")
+        self.assertEqual(salva["turnos"], original["turnos"])
+        self.assertEqual(salva["relacoes"], original["relacoes"])
 
 
 class TestOpenRouterSemModelo(ServidorComStubTestCase):
@@ -397,6 +422,42 @@ class TestChaveOpenRouterSemSelecao(ServidorComStubTestCase):
         self.assertEqual((status, corpo), (200, {"llm": False, "modelo": None}))
 
 
+class ChaveOpenRouterInvalidaBase:
+    chave_invalida = ""
+
+    def test_chave_invalida_nao_vaza(self):
+        status, config = self._get("/api/config")
+        self.assertEqual((status, config), (200, {"llm": False, "modelo": None}))
+        _, sessao = self._criar_persona_e_sessao()
+        status, corpo = self._post(
+            f"/api/sessoes/{sessao['id']}/mensagem", {"quem": "dan", "texto": "oi"},
+        )
+        self.assertEqual((status, corpo), (503, {"erro": "LLM não configurado"}))
+        self.assertEqual(StubMessagesAPI.requisicoes, [])
+        resposta = json.dumps(corpo, ensure_ascii=False)
+        stderr = self._encerrar_servidor_e_ler_stderr()
+        self.assertNotIn(self.chave_invalida, resposta)
+        self.assertNotIn(self.chave_invalida, stderr)
+
+
+class TestChaveOpenRouterComCR(ChaveOpenRouterInvalidaBase, ServidorComStubTestCase):
+    chave_invalida = "segredo\rCR"
+    env_extra = {"PHB_LLM_PROVIDER": "openrouter", "PHB_MODEL": "modelo/teste",
+                 "OPENROUTER_API_KEY": chave_invalida}
+
+
+class TestChaveOpenRouterComLF(ChaveOpenRouterInvalidaBase, ServidorComStubTestCase):
+    chave_invalida = "segredo\nLF"
+    env_extra = {"PHB_LLM_PROVIDER": "openrouter", "PHB_MODEL": "modelo/teste",
+                 "OPENROUTER_API_KEY": chave_invalida}
+
+
+class TestChaveOpenRouterForaLatin1(ChaveOpenRouterInvalidaBase, ServidorComStubTestCase):
+    chave_invalida = "segredo-λ"
+    env_extra = {"PHB_LLM_PROVIDER": "openrouter", "PHB_MODEL": "modelo/teste",
+                 "OPENROUTER_API_KEY": chave_invalida}
+
+
 class TestOpenRouterTimeout(TestOpenRouter):
     env_extra = {**TestOpenRouter.env_extra, "PHB_LLM_TIMEOUT": "1"}
 
@@ -420,6 +481,8 @@ class TestRespostasInvalidasOpenRouter(TestOpenRouter):
 
     def test_json_e_shapes_invalidos_sao_erro_generico(self):
         casos = [b"nao-json", b"{}", b'{"choices":[]}',
+                 b'{"choices":[null]}', b'{"choices":[123]}',
+                 b'{"choices":["x"]}', b'{"choices":[[]]}',
                  b'{"choices":[{"message":{"content":null}}]}',
                  b'{"choices":[{"message":{"content":""}}]}']
         for resposta in casos:

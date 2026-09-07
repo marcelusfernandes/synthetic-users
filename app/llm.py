@@ -60,8 +60,14 @@ class LLMError(Exception):
 
 def esta_configurado() -> bool:
     """`True` quando provedor, chave e modelo formam configuração válida."""
-    return (PROVEDOR in _CHAVES and bool(_CHAVES[PROVEDOR]) and bool(MODELO)
+    return (PROVEDOR in _CHAVES and _chave_valida(_CHAVES[PROVEDOR]) and bool(MODELO)
             and _TIMEOUT_SEGUNDOS is not None and _MAX_TOKENS is not None)
+
+
+def _chave_valida(chave) -> bool:
+    """Headers de autenticação aceitam somente ASCII visível, sem espaços."""
+    return (isinstance(chave, str) and bool(chave)
+            and all(33 <= ord(caractere) <= 126 for caractere in chave))
 
 
 class _SemRedirect(urllib.request.HTTPRedirectHandler):
@@ -99,26 +105,34 @@ def _chamar_llm(system: str, mensagem_usuario: str) -> str:
         }
     corpo = json.dumps(payload_requisicao).encode("utf-8")
 
-    requisicao = urllib.request.Request(
-        LLM_URL,
-        data=corpo,
-        method="POST",
-        headers=headers,
-    )
     try:
+        requisicao = urllib.request.Request(
+            LLM_URL,
+            data=corpo,
+            method="POST",
+            headers=headers,
+        )
         opener = urllib.request.build_opener(_SemRedirect())
         with opener.open(requisicao, timeout=_TIMEOUT_SEGUNDOS) as resp:
             payload = json.loads(resp.read().decode("utf-8"))
     except urllib.error.HTTPError as e:
         e.close()
         raise LLMError("falha ao chamar o LLM") from None
-    except (urllib.error.URLError, TimeoutError, OSError, http.client.HTTPException,
+    except (urllib.error.URLError, TimeoutError, OSError, ValueError, http.client.HTTPException,
             json.JSONDecodeError, UnicodeDecodeError):
         raise LLMError("falha ao chamar o LLM") from None
 
     try:
-        texto = (payload["content"][0]["text"] if PROVEDOR == "anthropic"
-                 else payload["choices"][0]["message"]["content"])
+        if PROVEDOR == "anthropic":
+            texto = payload["content"][0]["text"]
+        else:
+            escolha = payload["choices"][0]
+            if not isinstance(escolha, dict):
+                raise LLMError("falha ao chamar o LLM")
+            motivo = escolha.get("finish_reason")
+            if motivo is not None and motivo != "stop":
+                raise LLMError("falha ao chamar o LLM")
+            texto = escolha["message"]["content"]
     except (KeyError, IndexError, TypeError):
         raise LLMError("falha ao chamar o LLM") from None
     if not isinstance(texto, str) or not texto.strip():
