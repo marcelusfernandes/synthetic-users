@@ -23,6 +23,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 import unittest
 import urllib.error
 import urllib.request
@@ -43,23 +44,56 @@ class StubMessagesAPI(BaseHTTPRequestHandler):
     respostas: list = []
     modo_500 = False
     ultima_chave_recebida = None
+    requisicoes: list = []
+    respostas_brutas: list = []
+    status = 200
+    redirect_url = None
+    atraso = 0
+    desconectar = False
 
     def do_POST(self):
         tamanho = int(self.headers.get("Content-Length") or 0)
-        self.rfile.read(tamanho)
+        bruto_recebido = self.rfile.read(tamanho)
         StubMessagesAPI.ultima_chave_recebida = self.headers.get("x-api-key")
+        pedido = {
+            "path": self.path,
+            "headers": {k.lower(): v for k, v in self.headers.items()},
+            "body": json.loads(bruto_recebido.decode("utf-8")),
+        }
+        StubMessagesAPI.requisicoes.append(pedido)
+        if StubMessagesAPI.desconectar:
+            self.connection.shutdown(2)
+            self.connection.close()
+            return
+        if StubMessagesAPI.atraso:
+            time.sleep(StubMessagesAPI.atraso)
 
-        if StubMessagesAPI.modo_500:
+        if StubMessagesAPI.redirect_url:
+            self.send_response(307)
+            self.send_header("Location", StubMessagesAPI.redirect_url)
+            self.end_headers()
+            return
+
+        if StubMessagesAPI.modo_500 or StubMessagesAPI.status != 200:
             corpo = json.dumps({"erro": "falha simulada no LLM"}).encode("utf-8")
-            self.send_response(500)
+            self.send_response(500 if StubMessagesAPI.modo_500 else StubMessagesAPI.status)
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(corpo)))
             self.end_headers()
             self.wfile.write(corpo)
             return
 
-        texto = StubMessagesAPI.respostas.pop(0) if StubMessagesAPI.respostas else ""
-        corpo = json.dumps({"content": [{"type": "text", "text": texto}]}).encode("utf-8")
+        if StubMessagesAPI.respostas_brutas:
+            corpo = StubMessagesAPI.respostas_brutas.pop(0)
+        else:
+            texto = StubMessagesAPI.respostas.pop(0) if StubMessagesAPI.respostas else ""
+            if pedido["headers"].get("authorization"):
+                resposta = {"choices": [{
+                    "message": {"content": texto}, "finish_reason": "stop",
+                }]}
+            else:
+                resposta = {"content": [{"type": "text", "text": texto}]}
+            corpo = json.dumps(resposta).encode("utf-8")
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(corpo)))
@@ -82,6 +116,12 @@ class ServidorComStubTestCase(unittest.TestCase):
         StubMessagesAPI.respostas = []
         StubMessagesAPI.modo_500 = False
         StubMessagesAPI.ultima_chave_recebida = None
+        StubMessagesAPI.requisicoes = []
+        StubMessagesAPI.respostas_brutas = []
+        StubMessagesAPI.status = 200
+        StubMessagesAPI.redirect_url = None
+        StubMessagesAPI.atraso = 0
+        StubMessagesAPI.desconectar = False
         self.stub = ThreadingHTTPServer(("127.0.0.1", 0), StubMessagesAPI)
         self.stub_thread = threading.Thread(target=self.stub.serve_forever, daemon=True)
         self.stub_thread.start()
@@ -90,6 +130,11 @@ class ServidorComStubTestCase(unittest.TestCase):
         self.tmp_dir = tempfile.mkdtemp(prefix="phb-app-llm-teste-")
         env = dict(os.environ)
         env.pop("ANTHROPIC_API_KEY", None)
+        env.pop("OPENROUTER_API_KEY", None)
+        env.pop("PHB_LLM_PROVIDER", None)
+        env.pop("PHB_MODEL", None)
+        env.pop("PHB_MAX_TOKENS", None)
+        env.pop("PHB_LLM_TIMEOUT", None)
         env["PHB_LLM_URL"] = stub_url
         env.update(self.env_extra)
 
@@ -207,6 +252,12 @@ class TestMensagemFluxoCompleto(ServidorComStubTestCase):
         # a chave foi de fato enviada ao stub (prova de que a integração
         # está ligada), mas nunca aparece numa resposta HTTP do servidor.
         self.assertEqual(StubMessagesAPI.ultima_chave_recebida, CHAVE_TESTE)
+        pedido = StubMessagesAPI.requisicoes[0]
+        self.assertNotIn("authorization", pedido["headers"])
+        self.assertEqual(pedido["headers"]["anthropic-version"], "2023-06-01")
+        self.assertEqual(pedido["body"]["model"], "claude-sonnet-5")
+        self.assertIn("system", pedido["body"])
+        self.assertEqual(pedido["body"]["messages"][0]["role"], "user")
 
         status_sessao, corpo_sessao = self._get(f"/api/sessoes/{sessao['id']}")
         self.assertEqual(status_sessao, 200)
@@ -282,6 +333,201 @@ class TestMensagemStubComErro(ServidorComStubTestCase):
 
         stderr = self._encerrar_servidor_e_ler_stderr()
         self.assertNotIn(CHAVE_TESTE, stderr)
+
+
+class TestOpenRouter(ServidorComStubTestCase):
+    env_extra = {
+        "PHB_LLM_PROVIDER": "openrouter",
+        "OPENROUTER_API_KEY": CHAVE_TESTE,
+        "ANTHROPIC_API_KEY": "chave-anthropic-nao-selecionada",
+        "PHB_MODEL": "z-ai/glm-5.3-flash",
+    }
+
+    def test_payload_headers_modelo_e_selecao_explicita(self):
+        _, sessao = self._criar_persona_e_sessao()
+        StubMessagesAPI.respostas = [
+            '[{"tipo": "deboche", "intensidade": 0.4}]', "Resposta segura.",
+        ]
+        status, turno = self._post(
+            f"/api/sessoes/{sessao['id']}/mensagem", {"quem": "dan", "texto": "oi"},
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(turno["narrativa"], "Resposta segura.")
+        pedido = StubMessagesAPI.requisicoes[0]
+        self.assertEqual(pedido["headers"]["authorization"], f"Bearer {CHAVE_TESTE}")
+        self.assertNotIn("x-api-key", pedido["headers"])
+        self.assertNotIn("anthropic-version", pedido["headers"])
+        self.assertEqual(pedido["body"]["model"], "z-ai/glm-5.3-flash")
+        self.assertEqual(pedido["body"]["max_tokens"], 600)
+        self.assertEqual([m["role"] for m in pedido["body"]["messages"]], ["system", "user"])
+
+    def test_falha_na_segunda_chamada_nao_persiste_turno(self):
+        _, sessao = self._criar_persona_e_sessao()
+        _, original = self._get(f"/api/sessoes/{sessao['id']}")
+        StubMessagesAPI.respostas_brutas = [
+            json.dumps({"choices": [{"message": {"content": '[{"tipo":"neutro","intensidade":0}]'}}]}).encode(),
+            json.dumps({"choices": [{"message": {"content": "   "}}]}).encode(),
+        ]
+        status, corpo = self._post(
+            f"/api/sessoes/{sessao['id']}/mensagem", {"quem": "dan", "texto": "oi"},
+        )
+        self.assertEqual((status, corpo), (502, {"erro": "falha ao chamar o LLM"}))
+        _, salva = self._get(f"/api/sessoes/{sessao['id']}")
+        self.assertEqual(salva["turnos"], [])
+        self.assertEqual(salva["relacoes"], original["relacoes"])
+
+    def test_narrativa_com_termino_incompleto_nao_e_persistida(self):
+        _, sessao = self._criar_persona_e_sessao()
+        _, original = self._get(f"/api/sessoes/{sessao['id']}")
+        StubMessagesAPI.respostas_brutas = [
+            json.dumps({"choices": [{
+                "message": {"content": '[{"tipo":"deboche","intensidade":0.8}]'},
+                "finish_reason": "stop",
+            }]}).encode(),
+            json.dumps({"choices": [{
+                "message": {"content": "Resposta truncada mas não vazia"},
+                "finish_reason": "length",
+            }]}).encode(),
+        ]
+        status, corpo = self._post(
+            f"/api/sessoes/{sessao['id']}/mensagem", {"quem": "dan", "texto": "oi"},
+        )
+        self.assertEqual((status, corpo), (502, {"erro": "falha ao chamar o LLM"}))
+        _, salva = self._get(f"/api/sessoes/{sessao['id']}")
+        self.assertEqual(salva["turnos"], original["turnos"])
+        self.assertEqual(salva["relacoes"], original["relacoes"])
+
+
+class TestOpenRouterSemModelo(ServidorComStubTestCase):
+    env_extra = {"PHB_LLM_PROVIDER": "openrouter", "OPENROUTER_API_KEY": CHAVE_TESTE}
+
+    def test_openrouter_exige_modelo_explicito(self):
+        status, corpo = self._get("/api/config")
+        self.assertEqual((status, corpo), (200, {"llm": False, "modelo": None}))
+
+
+class TestProvedorInvalido(ServidorComStubTestCase):
+    env_extra = {"PHB_LLM_PROVIDER": "outro", "ANTHROPIC_API_KEY": CHAVE_TESTE}
+
+    def test_provedor_invalido_nao_finge_disponibilidade(self):
+        status, corpo = self._get("/api/config")
+        self.assertEqual((status, corpo), (200, {"llm": False, "modelo": None}))
+
+
+class TestChaveOpenRouterSemSelecao(ServidorComStubTestCase):
+    env_extra = {"OPENROUTER_API_KEY": CHAVE_TESTE}
+
+    def test_chave_openrouter_nao_substitui_anthropic_default(self):
+        status, corpo = self._get("/api/config")
+        self.assertEqual((status, corpo), (200, {"llm": False, "modelo": None}))
+
+
+class ChaveOpenRouterInvalidaBase:
+    chave_invalida = ""
+
+    def test_chave_invalida_nao_vaza(self):
+        status, config = self._get("/api/config")
+        self.assertEqual((status, config), (200, {"llm": False, "modelo": None}))
+        _, sessao = self._criar_persona_e_sessao()
+        status, corpo = self._post(
+            f"/api/sessoes/{sessao['id']}/mensagem", {"quem": "dan", "texto": "oi"},
+        )
+        self.assertEqual((status, corpo), (503, {"erro": "LLM não configurado"}))
+        self.assertEqual(StubMessagesAPI.requisicoes, [])
+        resposta = json.dumps(corpo, ensure_ascii=False)
+        stderr = self._encerrar_servidor_e_ler_stderr()
+        self.assertNotIn(self.chave_invalida, resposta)
+        self.assertNotIn(self.chave_invalida, stderr)
+
+
+class TestChaveOpenRouterComCR(ChaveOpenRouterInvalidaBase, ServidorComStubTestCase):
+    chave_invalida = "segredo\rCR"
+    env_extra = {"PHB_LLM_PROVIDER": "openrouter", "PHB_MODEL": "modelo/teste",
+                 "OPENROUTER_API_KEY": chave_invalida}
+
+
+class TestChaveOpenRouterComLF(ChaveOpenRouterInvalidaBase, ServidorComStubTestCase):
+    chave_invalida = "segredo\nLF"
+    env_extra = {"PHB_LLM_PROVIDER": "openrouter", "PHB_MODEL": "modelo/teste",
+                 "OPENROUTER_API_KEY": chave_invalida}
+
+
+class TestChaveOpenRouterForaLatin1(ChaveOpenRouterInvalidaBase, ServidorComStubTestCase):
+    chave_invalida = "segredo-λ"
+    env_extra = {"PHB_LLM_PROVIDER": "openrouter", "PHB_MODEL": "modelo/teste",
+                 "OPENROUTER_API_KEY": chave_invalida}
+
+
+class TestOpenRouterTimeout(TestOpenRouter):
+    env_extra = {**TestOpenRouter.env_extra, "PHB_LLM_TIMEOUT": "1"}
+
+    def test_timeout_vira_erro_generico(self):
+        StubMessagesAPI.atraso = 2
+        _, sessao = self._criar_persona_e_sessao()
+        status, corpo = self._post(
+            f"/api/sessoes/{sessao['id']}/mensagem", {"quem": "dan", "texto": "oi"},
+        )
+        self.assertEqual((status, corpo), (502, {"erro": "falha ao chamar o LLM"}))
+
+
+class TestRespostasInvalidasOpenRouter(TestOpenRouter):
+    def test_falha_de_rede_vira_erro_generico(self):
+        StubMessagesAPI.desconectar = True
+        _, sessao = self._criar_persona_e_sessao()
+        status, corpo = self._post(
+            f"/api/sessoes/{sessao['id']}/mensagem", {"quem": "dan", "texto": "oi"},
+        )
+        self.assertEqual((status, corpo), (502, {"erro": "falha ao chamar o LLM"}))
+
+    def test_json_e_shapes_invalidos_sao_erro_generico(self):
+        casos = [b"nao-json", b"{}", b'{"choices":[]}',
+                 b'{"choices":[null]}', b'{"choices":[123]}',
+                 b'{"choices":["x"]}', b'{"choices":[[]]}',
+                 b'{"choices":[{"message":{"content":null}}]}',
+                 b'{"choices":[{"message":{"content":""}}]}']
+        for resposta in casos:
+            with self.subTest(resposta=resposta):
+                _, sessao = self._criar_persona_e_sessao()
+                StubMessagesAPI.respostas_brutas = [resposta]
+                status, corpo = self._post(
+                    f"/api/sessoes/{sessao['id']}/mensagem", {"quem": "dan", "texto": "oi"},
+                )
+                self.assertEqual((status, corpo), (502, {"erro": "falha ao chamar o LLM"}))
+
+    def test_erros_http_sao_genericos(self):
+        for codigo in (401, 429, 500, 503):
+            with self.subTest(codigo=codigo):
+                StubMessagesAPI.status = codigo
+                _, sessao = self._criar_persona_e_sessao()
+                status, corpo = self._post(
+                    f"/api/sessoes/{sessao['id']}/mensagem", {"quem": "dan", "texto": "oi"},
+                )
+                self.assertEqual((status, corpo), (502, {"erro": "falha ao chamar o LLM"}))
+
+    def test_redirect_e_recusado_sem_enviar_credencial_ao_destino(self):
+        recebidas_destino = []
+
+        class Destino(BaseHTTPRequestHandler):
+            def do_POST(self):
+                recebidas_destino.append(dict(self.headers))
+                self.send_response(200)
+                self.end_headers()
+            def log_message(self, formato, *args):
+                pass
+
+        destino = ThreadingHTTPServer(("127.0.0.1", 0), Destino)
+        thread = threading.Thread(target=destino.serve_forever, daemon=True)
+        thread.start()
+        try:
+            StubMessagesAPI.redirect_url = f"http://127.0.0.1:{destino.server_address[1]}/roubo"
+            _, sessao = self._criar_persona_e_sessao()
+            status, corpo = self._post(
+                f"/api/sessoes/{sessao['id']}/mensagem", {"quem": "dan", "texto": "oi"},
+            )
+            self.assertEqual((status, corpo), (502, {"erro": "falha ao chamar o LLM"}))
+            self.assertEqual(recebidas_destino, [])
+        finally:
+            destino.shutdown(); destino.server_close(); thread.join(timeout=5)
 
 
 class TestMensagemValidacao(ServidorComStubTestCase):

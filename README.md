@@ -122,7 +122,7 @@ Um servidor HTTP em Python stdlib (sem dependências, sem build) para criar
 personas, abrir sessões e rodar turnos num navegador — mesma matemática do
 motor v3, mesma identidade v2 por default (Mariana). A página em `/` cobre
 as três áreas — Personas, Sessões, Turno — no fluxo persona → sessão →
-turno, e, com `ANTHROPIC_API_KEY` no ambiente, o turno com LLM (ver "Turno
+turno, e, com a chave do provedor no ambiente, o turno com LLM (ver "Turno
 com LLM" abaixo).
 
 ```bash
@@ -134,7 +134,7 @@ Rotas:
 
 | Rota | Descrição |
 |---|---|
-| `GET /api/config` | `{"llm": true\|false, "modelo": "<PHB_MODEL>"\|null}` — `llm` reflete se `ANTHROPIC_API_KEY` está no ambiente do servidor |
+| `GET /api/config` | `{"llm": true\|false, "modelo": "<PHB_MODEL>"\|null}` — `llm` reflete se provedor, chave e modelo estão configurados no servidor |
 | `GET /api/catalogo` | Eventos do motor (`tipo`, `eixos`, `valencia`) |
 | `GET /api/personas` · `POST /api/personas` | Lista/cria personas (`nome`, `bio`, `voz`, `ocean_base`) |
 | `GET /api/personas/{id}` | Uma persona |
@@ -149,7 +149,8 @@ sessões ficam em `sessoes/*.json` (ignorado pelo git — estado de execução).
 
 ### Turno com LLM (`app/llm.py`)
 
-Opcional: só ativa quando `ANTHROPIC_API_KEY` está no ambiente do servidor
+Opcional: usa Anthropic por default e só ativa quando a chave correspondente
+ao `PHB_LLM_PROVIDER` está no ambiente do servidor
 que roda `python3 -m app.server`. Com a chave, o ciclo completo do PHB v3
 fica disponível pela página — um campo "Conversa" no bloco Turno, além do
 turno manual por checkbox — e por `POST /api/sessoes/{id}/mensagem`
@@ -160,16 +161,27 @@ o front funciona exatamente como antes (eventos escolhidos à mão) e mostra
 uma nota explicando como habilitar; a chave nunca aparece em arquivo, log
 ou resposta HTTP.
 
+Respostas sem texto ou marcadas pelo OpenRouter como incompletas são tratadas como
+falha; o turno e seu estado não são persistidos parcialmente.
+
 Variáveis de ambiente:
 
 | Variável | Default | Descrição |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | — | ausente: turno com LLM desligado (`/api/config` → `llm: false`) |
-| `PHB_LLM_URL` | `https://api.anthropic.com/v1/messages` | endpoint da Messages API |
-| `PHB_MODEL` | `claude-sonnet-5` | modelo usado em `interpretar`/`narrar` |
+| `PHB_LLM_PROVIDER` | `anthropic` | `anthropic` ou `openrouter`; a seleção nunca é inferida pela chave presente |
+| `ANTHROPIC_API_KEY` | — | chave usada somente quando o provedor é `anthropic` |
+| `OPENROUTER_API_KEY` | — | chave usada somente quando o provedor é `openrouter` |
+| `PHB_LLM_URL` | endpoint oficial do provedor | override do endpoint, inclusive para testes locais |
+| `PHB_MODEL` | `claude-sonnet-5` no Anthropic | modelo literal; obrigatório no OpenRouter, sem fallback silencioso |
+| `PHB_MAX_TOKENS` | `600` | inteiro positivo; no OpenRouter, o orçamento também pode ser consumido por reasoning |
+| `PHB_LLM_TIMEOUT` | `60` | timeout HTTP em segundos, inteiro positivo |
 
 ```bash
 ANTHROPIC_API_KEY=sk-... make run   # turno com LLM habilitado
+
+# OpenRouter (exemplo de configuração; não executa chamada ao configurar)
+PHB_LLM_PROVIDER=openrouter OPENROUTER_API_KEY=... \
+  PHB_MODEL=z-ai/glm-5.3-flash PHB_MAX_TOKENS=1200 make run
 ```
 
 ## Como rodar um research test
