@@ -22,15 +22,20 @@ calcula o estado. A aplicação continua em Python stdlib e HTML/CSS/JS puro, se
 - UI e documentação do projeto em português. A skill distribuída mantém sua versão original.
   Mudanças de comportamento atualizam testes e documentação no mesmo PR.
 
-## Piloto Codex
+## Desenvolvimento com Codex
 
-Usar `$autonomous-loop` para o objetivo #14. GitHub contém o plano e as decisões;
-[docs/piloto-openrouter.md](docs/piloto-openrouter.md) contém os links e comandos.
-A integração do piloto é `test/openrouter`, nunca `main`. Um coordenador e uma implementação
-por vez, em checkout isolado, preservando alterações do usuário. Não executar em paralelo
-o orquestrador Claude descrito no `CLAUDE.md`.
+Usar `$autonomous-loop` somente quando o usuário autorizar um objetivo GitHub ou pedir
+para retomá-lo. Um prompt comum não retoma automaticamente o objetivo #14. O guia prático
+está em [docs/codex.md](docs/codex.md); o histórico do piloto OpenRouter está em
+[docs/piloto-openrouter.md](docs/piloto-openrouter.md).
 
-Respeitar as permissões atuais do objetivo; sua criação não autoriza merge nem chamadas
-pagas. Decisões importantes ficam em checkpoints, com a resposta explícita e sua origem.
-Os workflows existentes permanecem: manter Context/Proof/Files e `Blocked by:` nas issues
-durante a migração. Labels não substituem aprovação de revisão ou autorização do usuário.
+- Uma coordenação e uma implementação por vez, em branch `codex/task-N` e checkout isolado.
+- `main` é o destino normal somente quando `Integration branch`/permissões do objetivo assim
+  determinarem. Nunca fazer push direto nela nem inferir autorização de merge.
+- Decisões materiais, produção, dados e custo exigem checkpoint humano explícito.
+- Revisão local independente não equivale a aprovação no GitHub.
+- Usar subagentes somente quando solicitado; preferências atuais: Luna para exploração ou
+  pesquisa online, Sol para implementação e Astra para revisão. Não criar perfis globais.
+- Quando disponível, preferir o grafo de código (indexar se necessário). Usar `rg` quando
+  ele estiver indisponível/insuficiente e para strings ou configurações; o MCP não é requisito.
+- Não executar em paralelo o orquestrador Claude descrito no `CLAUDE.md`.
