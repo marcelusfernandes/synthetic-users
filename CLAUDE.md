@@ -10,9 +10,10 @@ agent loop do plugin `agentic-setup` (issues → worktrees → PRs revisados →
   e o que `app/` adicionar). CI (`.github/workflows/test.yml`) e o `negative-control` do
   loop rodam exatamente isto.
 - `python3 phb/run_turn.py --catalogo` — lista os eventos que o LLM pode emitir.
-- Variáveis de ambiente do front (`app/`): `ANTHROPIC_API_KEY` (opcional — liga o
-  turno com LLM), `PHB_MODEL` (default `claude-sonnet-5`), `PHB_LLM_URL` (default
-  `https://api.anthropic.com/v1/messages`).
+- Variáveis de ambiente do front (`app/`): `PHB_LLM_PROVIDER=anthropic|openrouter`,
+  `ANTHROPIC_API_KEY`/`OPENROUTER_API_KEY` (somente a chave selecionada liga o turno),
+  `PHB_MODEL` (default `claude-sonnet-5` somente no Anthropic) e `PHB_LLM_URL`
+  (default: endpoint oficial do provedor).
 
 ## Mapa
 
@@ -42,7 +43,7 @@ agent loop do plugin `agentic-setup` (issues → worktrees → PRs revisados →
    mockado. `make test` é a única porta de entrada.
 5. **Português** nos textos de UI, docs e mensagens; identificadores seguem o código
    existente (`persona`, `sessao`, `quem`, `eventos`, `snapshot`).
-6. **Segredos só por ambiente.** `ANTHROPIC_API_KEY` (opcional, para o turno com LLM)
+6. **Segredos só por ambiente.** `ANTHROPIC_API_KEY` e `OPENROUTER_API_KEY` (opcionais)
    nunca aparece em arquivo, log ou resposta HTTP; sem a variável o front funciona com
    eventos escolhidos à mão.
 7. **Docs iguais ao código.** Mudança de comando, rota ou formato de arquivo atualiza
