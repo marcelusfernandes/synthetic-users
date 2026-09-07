@@ -89,6 +89,11 @@ Destruir custa ~2.4× menos que construir (`neg_scale 2.70` vs `pos_scale 1.13`)
 
 ## Como usar
 
+Além da CLI abaixo, `make run` sobe um front web (`app/`, ver README) que
+cobre o mesmo ciclo pelo navegador — criar personas, abrir sessões, rodar
+turnos — com o mesmo contrato: o LLM só interpreta a mensagem em eventos e
+narra a resposta; quem calcula o estado é sempre `engine_v3.step()`.
+
 ```bash
 # 1. criar o estado de uma instância
 python3 phb/run_turn.py --estado sessao.json --init
@@ -102,8 +107,11 @@ python3 phb/run_turn.py --estado sessao.json --quem dan \
 # 3. o LLM narra a resposta proporcional ao snapshot (voz da persona)
 
 # validar tudo a qualquer momento
-python3 phb/test_engine_v3.py     # 14/14
-python3 phb/calibrar_v3.py --check  # 11/11 critérios na config ideal
+python3 phb/test_engine_v3.py       # a suíte do motor — inclui a regressão dos 11
+                                     # critérios de aceitação na config ideal (11/11)
+python3 phb/calibrar_v3.py --check  # valida a `Config` default (não a config ideal,
+                                     # ver phb/calibrar_v3.py:11) — hoje falha em
+                                     # C4_estado_misto
 ```
 
 A persona (voz, bio, gatilhos) continua nos `.mdc` (`exemplos/mariana.mdc` + `exemplos/mariana_v3.mdc`) — identidade é do LLM, dinâmica é do motor.
