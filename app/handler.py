@@ -1,11 +1,12 @@
 """
 `Handler` — o roteador HTTP da API (personas, sessões, turnos, estáticos).
 
-Cada rota chama `app.store` (persistência) e, no máximo, `engine_v3.step`/
-`snapshot` (o motor) — nenhum cálculo de eixo, OCEAN, goodwill ou ruptura
-acontece aqui (CLAUDE.md, invariante 1). Qualquer exceção não tratada vira
-500 `{"erro": ...}`; o traceback vai para stderr, nunca para o corpo da
-resposta.
+Cada rota chama `app.store` (persistência), no máximo `engine_v3.step`/
+`snapshot` (o motor) e, no turno com LLM (`POST .../mensagem`), `app.llm`
+(interpretar/narrar) — nenhum cálculo de eixo, OCEAN, goodwill ou ruptura
+acontece aqui (CLAUDE.md, invariante 1); o LLM só classifica e narra, nunca
+calcula. Qualquer exceção não tratada vira 500 `{"erro": ...}`; o
+traceback vai para stderr, nunca para o corpo da resposta.
 """
 import json
 import re
@@ -17,11 +18,12 @@ from urllib.parse import unquote, urlsplit
 from engine_v3 import EVENTS, novo_estado, snapshot, step
 import run_turn
 
-from . import estatico, store, validacao
+from . import estatico, llm, store, validacao
 
 ROTA_PERSONA = re.compile(r"^/api/personas/([^/]+)$")
 ROTA_SESSAO = re.compile(r"^/api/sessoes/([^/]+)$")
 ROTA_TURNO = re.compile(r"^/api/sessoes/([^/]+)/turno$")
+ROTA_MENSAGEM = re.compile(r"^/api/sessoes/([^/]+)/mensagem$")
 ROTA_ESTATICO = re.compile(r"^/static/(.+)$")
 
 
@@ -105,12 +107,10 @@ class Handler(BaseHTTPRequestHandler):
         if caminho == "/":
             self._servir_arquivo("index.html")
         elif caminho == "/api/config":
-            self._json(200, {"llm": False, "modelo": None})
+            ligado = llm.esta_configurado()
+            self._json(200, {"llm": ligado, "modelo": llm.MODELO if ligado else None})
         elif caminho == "/api/catalogo":
-            self._json(200, {"eventos": [
-                {"tipo": tipo, "eixos": spec["axes"], "valencia": spec["valencia"]}
-                for tipo, spec in EVENTS.items()
-            ]})
+            self._json(200, {"eventos": self._catalogo()})
         elif caminho == "/api/personas":
             self._json(200, {"personas": store.listar_personas(self._dados_dir())})
         elif m_persona:
@@ -123,6 +123,12 @@ class Handler(BaseHTTPRequestHandler):
             self._servir_arquivo(m_estatico.group(1))
         else:
             self._erro(404, "não encontrado")
+
+    def _catalogo(self) -> list:
+        return [
+            {"tipo": tipo, "eixos": spec["axes"], "valencia": spec["valencia"]}
+            for tipo, spec in EVENTS.items()
+        ]
 
     def _get_persona(self, persona_id: str) -> None:
         persona = store.carregar_persona(self._dados_dir(), persona_id)
@@ -161,12 +167,15 @@ class Handler(BaseHTTPRequestHandler):
 
     def _rotear_post(self, caminho: str) -> None:
         m_turno = ROTA_TURNO.match(caminho)
+        m_mensagem = ROTA_MENSAGEM.match(caminho)
         if caminho == "/api/personas":
             self._criar_persona()
         elif caminho == "/api/sessoes":
             self._criar_sessao()
         elif m_turno:
             self._executar_turno(m_turno.group(1))
+        elif m_mensagem:
+            self._executar_mensagem(m_mensagem.group(1))
         else:
             self._erro(404, "não encontrado")
 
@@ -226,6 +235,64 @@ class Handler(BaseHTTPRequestHandler):
             "eventos": turno_validado["eventos"],
             "snapshot": snap,
             "log": log,
+        }
+        doc["turnos"].append(turno)
+        store.salvar_sessao(dados_dir, doc)
+        self._json(200, turno)
+
+    def _executar_mensagem(self, sessao_id: str) -> None:
+        """`POST /api/sessoes/{id}/mensagem` — o ciclo completo com LLM:
+        interpretar a mensagem em eventos, rodar `step()` (o mesmo caminho
+        de `/turno`) e narrar o snapshot na voz da persona. 503 sem a
+        chave; 502 se o LLM falhar em qualquer uma das duas chamadas —
+        nesse caso o turno não é persistido (a sessão só é salva depois
+        que interpretar E narrar tiverem sucesso)."""
+        if not llm.esta_configurado():
+            self._erro(503, "LLM não configurado")
+            return
+
+        dados = self._ler_corpo_json()
+        if not isinstance(dados, dict):
+            raise validacao.ErroDeValidacao("corpo inválido: esperado um objeto JSON")
+        quem = str(dados.get("quem") or "").strip()
+        if not quem:
+            raise validacao.ErroDeValidacao("quem não pode ser vazio")
+        texto = str(dados.get("texto") or "").strip()
+        if not texto:
+            raise validacao.ErroDeValidacao("texto não pode ser vazio")
+
+        dados_dir = self._dados_dir()
+        doc = store.carregar_sessao(dados_dir, sessao_id)
+        if doc is None:
+            self._erro(404, "sessão não encontrada")
+            return
+
+        persona = store.carregar_persona(dados_dir, doc["persona_id"]) or {}
+
+        try:
+            eventos = llm.interpretar(texto, persona, self._catalogo(), quem)
+        except llm.LLMError as e:
+            self._erro(502, str(e))
+            return
+
+        estado = doc["estado_obj"]
+        log = step(estado, run_turn.cfg_ideal(), quem, eventos)
+        snap = snapshot(estado, quem)
+
+        try:
+            narrativa = llm.narrar(texto, persona, snap, eventos, quem)
+        except llm.LLMError as e:
+            self._erro(502, str(e))
+            return
+
+        turno = {
+            "turno": len(doc["turnos"]) + 1,
+            "quem": quem,
+            "texto": texto,
+            "eventos": eventos,
+            "snapshot": snap,
+            "log": log,
+            "narrativa": narrativa,
         }
         doc["turnos"].append(turno)
         store.salvar_sessao(dados_dir, doc)

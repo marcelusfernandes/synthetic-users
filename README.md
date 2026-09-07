@@ -108,8 +108,9 @@ python3 phb/run_turn.py --estado sessao.json --quem dan \
 
 Um servidor HTTP em Python stdlib (sem dependências, sem build) para criar
 personas, abrir sessões e rodar turnos num navegador — mesma matemática do
-motor v3, mesma identidade v2 por default (Mariana). Nesta issue a página
-servida em `/` é só um placeholder; a interface vem numa issue seguinte.
+motor v3, mesma identidade v2 por default (Mariana). A página em `/` cobre
+as três áreas (personas, sessões, turno) e, com `ANTHROPIC_API_KEY` no
+ambiente, o turno com LLM (ver "Turno com LLM" abaixo).
 
 ```bash
 make run                      # sobe em http://localhost:8000 (dados: raiz do repo)
@@ -120,17 +121,43 @@ Rotas:
 
 | Rota | Descrição |
 |---|---|
-| `GET /api/config` | `{"llm": false, "modelo": null}` (turno com LLM: issue futura) |
+| `GET /api/config` | `{"llm": true\|false, "modelo": "<PHB_MODEL>"\|null}` — `llm` reflete se `ANTHROPIC_API_KEY` está no ambiente do servidor |
 | `GET /api/catalogo` | Eventos do motor (`tipo`, `eixos`, `valencia`) |
 | `GET /api/personas` · `POST /api/personas` | Lista/cria personas (`nome`, `bio`, `voz`, `ocean_base`) |
 | `GET /api/personas/{id}` | Uma persona |
 | `GET /api/sessoes` · `POST /api/sessoes` | Lista/abre sessões (`persona_id`) |
 | `GET /api/sessoes/{id}` | Persona, relações por interlocutor e turnos da sessão |
 | `POST /api/sessoes/{id}/turno` | Executa um turno (`quem`, `eventos`) via `engine_v3.step()` |
+| `POST /api/sessoes/{id}/mensagem` | Turno com LLM: interpreta `texto` em eventos, roda `step()`, narra — ver "Turno com LLM" abaixo |
 | `GET /` · `GET /static/<arquivo>` | Página e estáticos de `app/static/` |
 
 Personas ficam em `personas/*.json` (versionadas — `mariana.json` é a seed);
 sessões ficam em `sessoes/*.json` (ignorado pelo git — estado de execução).
+
+### Turno com LLM (`app/llm.py`)
+
+Opcional: só ativa quando `ANTHROPIC_API_KEY` está no ambiente do servidor
+que roda `python3 -m app.server`. Com a chave, o ciclo completo do PHB v3
+fica disponível pela página — um campo "Conversa" no bloco Turno, além do
+turno manual por checkbox — e por `POST /api/sessoes/{id}/mensagem`
+(`{"quem", "texto"}`): o LLM interpreta a mensagem em eventos do catálogo,
+`engine_v3.step()` calcula o novo estado (o LLM nunca calcula), e o LLM
+narra a resposta na voz da persona, proporcional ao snapshot. Sem a chave,
+o front funciona exatamente como antes (eventos escolhidos à mão) e mostra
+uma nota explicando como habilitar; a chave nunca aparece em arquivo, log
+ou resposta HTTP.
+
+Variáveis de ambiente:
+
+| Variável | Default | Descrição |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | — | ausente: turno com LLM desligado (`/api/config` → `llm: false`) |
+| `PHB_LLM_URL` | `https://api.anthropic.com/v1/messages` | endpoint da Messages API |
+| `PHB_MODEL` | `claude-sonnet-5` | modelo usado em `interpretar`/`narrar` |
+
+```bash
+ANTHROPIC_API_KEY=sk-... make run   # turno com LLM habilitado
+```
 
 ## Como rodar um research test
 

@@ -20,6 +20,7 @@ const estado = {
   personas: [], personaSelecionadaId: null,
   sessoes: [], sessaoSelecionadaId: null, sessaoDetalhe: null,
   catalogo: [], interlocutorSelecionado: null,
+  llmLigado: false,
 };
 
 // --- HTTP -------------------------------------------------------------
@@ -180,6 +181,15 @@ async function selecionarSessao(id) {
   renderSnapshotAtual();
 }
 
+// --- Configuração (turno com LLM) -------------------------------------------
+
+async function carregarConfig() {
+  const { ok, corpo } = await apiGet("/api/config");
+  estado.llmLigado = !!(ok && corpo && corpo.llm);
+  document.getElementById("form-conversa").hidden = !estado.llmLigado;
+  document.getElementById("turno-llm-desativado").hidden = estado.llmLigado;
+}
+
 // --- Turno: catálogo de eventos --------------------------------------------
 
 async function carregarCatalogo() {
@@ -245,6 +255,33 @@ async function onSubmitTurno(evento) {
     return;
   }
   desmarcarEventosCatalogo();
+  await carregarSessoes();
+  await selecionarSessao(estado.sessaoSelecionadaId);
+  estado.interlocutorSelecionado = quem;
+  atualizarSeletorInterlocutor();
+  renderSnapshotAtual();
+}
+
+async function onSubmitConversa(evento) {
+  evento.preventDefault();
+  mostrarErro("conversa-erro", "");
+  if (!estado.sessaoSelecionadaId) {
+    mostrarErro("conversa-erro", "selecione uma sessão primeiro");
+    return;
+  }
+  const quem = document.getElementById("turno-quem").value.trim();
+  const textoElemento = document.getElementById("conversa-texto");
+  const texto = textoElemento.value.trim();
+  if (!quem || !texto) {
+    mostrarErro("conversa-erro", "informe quem e a mensagem");
+    return;
+  }
+  const { ok, corpo } = await apiPost(`/api/sessoes/${estado.sessaoSelecionadaId}/mensagem`, { quem, texto });
+  if (!ok) {
+    mostrarErro("conversa-erro", (corpo && corpo.erro) || "erro ao enviar mensagem");
+    return;
+  }
+  textoElemento.value = "";
   await carregarSessoes();
   await selecionarSessao(estado.sessaoSelecionadaId);
   estado.interlocutorSelecionado = quem;
@@ -324,12 +361,14 @@ function renderHistorico() {
   const turnos = (estado.sessaoDetalhe && estado.sessaoDetalhe.turnos) || [];
   for (const turno of turnos) {
     const eventosTexto = turno.eventos.map((e) => `${e.tipo} (${e.intensidade})`).join(", ");
-    const li = el("li", {}, [
+    const filhos = [
       el("strong", { texto: `Turno ${turno.turno} — quem: ${turno.quem}` }),
-      el("p", { texto: "Eventos: " + eventosTexto }),
-      el("pre", { class: "log", texto: JSON.stringify(turno.log, null, 2) }),
-    ]);
-    ol.appendChild(li);
+    ];
+    if (turno.texto) filhos.push(el("p", { texto: "Mensagem: " + turno.texto }));
+    filhos.push(el("p", { texto: "Eventos: " + eventosTexto }));
+    if (turno.narrativa) filhos.push(el("blockquote", { class: "narrativa", texto: turno.narrativa }));
+    filhos.push(el("pre", { class: "log", texto: JSON.stringify(turno.log, null, 2) }));
+    ol.appendChild(el("li", {}, filhos));
   }
 }
 
@@ -346,9 +385,11 @@ function init() {
   document.getElementById("form-persona").addEventListener("submit", onSubmitPersona);
   document.getElementById("btn-nova-sessao").addEventListener("click", onClickNovaSessao);
   document.getElementById("form-turno").addEventListener("submit", onSubmitTurno);
+  document.getElementById("form-conversa").addEventListener("submit", onSubmitConversa);
   carregarPersonas();
   carregarSessoes();
   carregarCatalogo();
+  carregarConfig();
 }
 
 document.addEventListener("DOMContentLoaded", init);
