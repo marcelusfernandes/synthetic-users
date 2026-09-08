@@ -104,6 +104,13 @@ Para desenvolver este repositório com o loop Codex, consulte
 [`docs/codex.md`](docs/codex.md). O guia não inicia nem retoma objetivos automaticamente;
 cada execução depende do pedido e das permissões do objetivo no GitHub.
 
+O [core da experiência — M3](docs/core-experiencia.md) está planejado no
+[objetivo #23](https://github.com/marcelusfernandes/synthetic-users/issues/23):
+perfis, sessões, conversa/modo manual e histórico, com frontend React/TypeScript/StyleX
+separado e motor Python preservado. A [proposta visual autocontida](docs/experiencia-produto-phb.html)
+é navegável; o novo front ainda não foi implementado. O
+[contrato HTTP atual](contracts/http-atual.md) orienta essa construção.
+
 ```bash
 make test                            # motor + app/tests
 
