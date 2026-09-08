@@ -4,6 +4,18 @@ Este repositório é um **laboratório de research tests** da metodologia **PHB 
 
 Usuários Sintéticos são representações simuladas de consumidores reais, operados por agents com **MCP (Model Context Protocol)**. Aqui eles são usados em experimentos de pesquisa — testes de usabilidade, benchmarks e entrevistas simuladas — que investigam hipóteses de produto **e** validam a própria metodologia a cada teste (consistência, rastreabilidade, emergência). Ver [`testes/`](testes/) para o ciclo completo de experimento.
 
+## Novo frontend
+
+A experiência React + TypeScript + StyleX vive em `apps/frontend/`, separada da API Python.
+Instale com `npm ci --prefix apps/frontend` (Node 22.22.3+), valide com `make test` e sirva o build:
+
+```sh
+python3 -m app.server --porta 8000 --dados /tmp/phb-core-demo --frontend apps/frontend/dist
+```
+
+Abra `http://127.0.0.1:8000/produto/`. O laboratório clássico continua em `/`.
+[Comandos, escopo e arquitetura do core](docs/core-experiencia.md).
+
 ## Estado atual — PHB v3 (motor determinístico)
 
 O projeto tem duas frentes:

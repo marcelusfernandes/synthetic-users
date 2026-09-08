@@ -5,3 +5,5 @@ __pycache__/
 .claude/worktrees/
 # runtime data of the front (sessions are per-run state)
 sessoes/
+node_modules/
+apps/frontend/dist/

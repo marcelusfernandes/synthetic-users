@@ -205,3 +205,11 @@ PHB/Anthropic/OpenRouter removidas do processo, criou um perfil fictício e veri
 manual acima. Também verificou retomada, rejeição de campo extra, 404 e 503 sem alterar o número
 de turnos. O processo e os dados foram descartados ao terminar. A cobertura completa de provedores
 é da suíte existente e da futura validação do core, não deste smoke manual.
+
+## Frontend compilado opcional
+
+`python3 -m app.server --frontend apps/frontend/dist` habilita `/produto` e `/produto/`
+para `index.html` e `/produto/assets/...` para os arquivos locais do build. A raiz `/`
+e `/static/...` continuam atendendo o laboratório clássico. Sem a opção, `/produto/`
+retorna 404. Arquivos inexistentes e caminhos externos à raiz do build retornam 404.
+A API permanece em `/api`; não há CORS novo nem mudança do formato persistido.

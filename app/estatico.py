@@ -18,13 +18,13 @@ MIME_TIPOS = {
 MIME_PADRAO = "application/octet-stream"
 
 
-def resolver_arquivo(caminho_pedido: str):
+def resolver_arquivo(caminho_pedido: str, diretorio=None):
     """Retorna `(caminho_absoluto, mime)` para `caminho_pedido` relativo a
     `STATIC_DIR`, ou `None` se o arquivo não existir ou o caminho escapar
     de `STATIC_DIR`."""
-    raiz = os.path.normpath(STATIC_DIR)
-    alvo = os.path.normpath(os.path.join(raiz, caminho_pedido.lstrip("/")))
-    dentro_da_raiz = alvo == raiz or alvo.startswith(raiz + os.sep)
+    raiz = os.path.realpath(diretorio or STATIC_DIR)
+    alvo = os.path.realpath(os.path.join(raiz, caminho_pedido.lstrip("/")))
+    dentro_da_raiz = os.path.commonpath([raiz, alvo]) == raiz
     if not dentro_da_raiz or not os.path.isfile(alvo):
         return None
     _, ext = os.path.splitext(alvo)

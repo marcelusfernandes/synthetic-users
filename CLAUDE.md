@@ -40,7 +40,7 @@ agent loop do plugin `agentic-setup` (issues → worktrees → PRs revisados →
 3. **Python 3.12 stdlib apenas** em `app/` e `phb/`; nenhuma dependência `pip`. A UI legada
    continua HTML/CSS/JS puro, sem build. O [core M3](docs/core-experiencia.md) autoriza
    React/TypeScript/StyleX com build em `apps/frontend/`, preservando a UI legada durante
-   a transição. Sem CDN em runtime; o novo frontend ainda será implementado.
+   a transição. Sem CDN em runtime. Node 22.22.3+ para ferramentas; `npm ci --prefix apps/frontend` antes de `make test`, que também executa typecheck, testes e build do front.
 4. **Os testes de `app/` sobem o servidor real** numa porta efêmera e falam HTTP; nada é
    mockado. `make test` é a única porta de entrada.
 5. **Português** nos textos de UI, docs e mensagens; identificadores seguem o código
