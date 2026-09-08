@@ -37,8 +37,10 @@ agent loop do plugin `agentic-setup` (issues → worktrees → PRs revisados →
 2. **A matemática de `phb/engine_v3.py` não muda.** Só se admite parâmetro novo com valor
    default nos construtores (`novo_estado`, `Estado`); `config_v3_ideal.json` não muda e
    `python3 phb/test_engine_v3.py` continua 14/14.
-3. **Python 3.12 stdlib apenas** em `app/` e `phb/`; nenhuma dependência `pip`. O front é
-   HTML/CSS/JS puro servido pelo próprio servidor, sem build, sem framework, sem CDN.
+3. **Python 3.12 stdlib apenas** em `app/` e `phb/`; nenhuma dependência `pip`. A UI legada
+   continua HTML/CSS/JS puro, sem build. O [core M3](docs/core-experiencia.md) autoriza
+   React/TypeScript/StyleX com build em `apps/frontend/`, preservando a UI legada durante
+   a transição. Sem CDN em runtime; o novo frontend ainda será implementado.
 4. **Os testes de `app/` sobem o servidor real** numa porta efêmera e falam HTTP; nada é
    mockado. `make test` é a única porta de entrada.
 5. **Português** nos textos de UI, docs e mensagens; identificadores seguem o código
