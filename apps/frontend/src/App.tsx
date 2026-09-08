@@ -4,6 +4,7 @@ import { api, type ApiClient } from './api/client';
 import type { Configuration, Profile, SessionSummary } from './api/types';
 import { Empty, ErrorBox, formatDate, Icon, LinkButton, Loading, PageHeading } from './ui/components';
 import { s } from './ui/styles';
+import { Profiles } from './features/Profiles';
 
 export type HomeData = { profiles: Profile[]; sessions: SessionSummary[]; config: Configuration };
 const navigation = [
@@ -33,8 +34,14 @@ export function App({ client = api }: { client?: ApiClient }) {
       if (active) setData({ profiles, sessions: sessions.sort((a, b) => b.criada_em.localeCompare(a.criada_em)), config });
     }).catch(e => { if (active) setError(e); });
     return () => { active = false; };
-  }, [client, revision]);
-  const section = route.split('/')[1] || '';
+  }, [client, revision, route]);
+  const [path, query] = route.split('?');
+  const section = path.split('/')[1] || '';
+  const selectedProfile = data?.profiles.find(p => p.id === new URLSearchParams(query).get('perfil'));
+  function profileCreated(profile: Profile) {
+    setData(d => d ? { ...d, profiles: [...d.profiles, profile] } : d);
+    if (window.location.hash === '#/perfis/novo') window.location.hash = `#/perfis/${profile.id}`;
+  }
   return <div {...stylex.props(s.page)}>
     <a href="#main" onClick={e => { e.preventDefault(); document.getElementById('main')?.focus(); }} {...stylex.props(s.skip)}>Pular para o conteúdo</a>
     <div {...stylex.props(s.layout)}>
@@ -48,8 +55,9 @@ export function App({ client = api }: { client?: ApiClient }) {
       </aside>
       <main id="main" tabIndex={-1} {...stylex.props(s.main)}>
         <div {...stylex.props(s.topbar)}><span>WORKSPACE <span aria-hidden="true">/</span> <strong>Local</strong></span><span {...stylex.props(s.badge, data?.config.llm ? s.good : s.pink)}>{data ? data.config.llm ? 'Conversa disponível' : 'Modo manual disponível' : 'Conectando ao laboratório…'}</span></div>
-        <div {...stylex.props(s.stack)}>{error ? <ErrorBox error={error} retry={() => setRevision(r => r + 1)} /> : !data ? <Loading /> : section === '' ? <Overview data={data} /> : ['perfis', 'sessoes', 'historico'].includes(section) ? <>
+        <div {...stylex.props(s.stack)}>{error ? <ErrorBox error={error} retry={() => setRevision(r => r + 1)} /> : !data ? <Loading /> : section === '' ? <Overview data={data} /> : section === 'perfis' ? <Profiles key={path} client={client} profiles={data.profiles} selectedId={path.split('/')[2]} onCreated={profileCreated} /> : ['sessoes', 'historico'].includes(section) ? <>
           <PageHeading title={navigation.find(n => n.href === `#/${section}`)!.label} description="Uma etapa de cada vez, do perfil à evolução da interação." />
+          {selectedProfile && <p role="status" {...stylex.props(s.notice)}>Perfil selecionado: <strong>{selectedProfile.nome}</strong>. A abertura da sessão será habilitada na próxima etapa.</p>}
           <section {...stylex.props(s.card)}><Empty title="Esta área está em construção"><p>A fundação já está conectada ao servidor. A jornada será habilitada na próxima etapa.</p></Empty><a href="/" {...stylex.props(s.link)}>Usar o laboratório clássico ↗</a></section>
         </> : <><PageHeading title="Página não encontrada" description="Este endereço não corresponde a uma área do workspace." /><LinkButton href="#/">Voltar ao início</LinkButton></>}</div>
       </main>

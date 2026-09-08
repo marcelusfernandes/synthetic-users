@@ -1,5 +1,5 @@
 import * as stylex from '@stylexjs/stylex';
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import { useEffect, useRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { s } from './styles';
 
 export function Button({ secondary, children, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { secondary?: boolean }) {
@@ -9,7 +9,9 @@ export function LinkButton({ href, children, light = false }: { href: string; ch
   return <a href={href} {...stylex.props(s.button, light && s.light)}>{children}</a>;
 }
 export function PageHeading({ title, description, action }: { title: string; description: string; action?: ReactNode }) {
-  return <header {...stylex.props(s.row, s.between)}><div {...stylex.props(s.tight)}><h1 id="page-title" tabIndex={-1} {...stylex.props(s.h1)}>{title}</h1><p {...stylex.props(s.muted)}>{description}</p></div>{action}</header>;
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => { heading.current?.focus(); }, []);
+  return <header {...stylex.props(s.row, s.between)}><div {...stylex.props(s.tight)}><h1 ref={heading} id="page-title" tabIndex={-1} {...stylex.props(s.h1)}>{title}</h1><p {...stylex.props(s.muted)}>{description}</p></div>{action}</header>;
 }
 export function Empty({ title, children }: { title: string; children: ReactNode }) {
   return <div {...stylex.props(s.empty)}><h2 {...stylex.props(s.h2)}>{title}</h2><div {...stylex.props(s.muted)}>{children}</div></div>;

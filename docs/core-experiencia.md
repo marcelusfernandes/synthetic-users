@@ -162,3 +162,13 @@ Versões verificadas em 07/09/2026 no registro npm e na documentação oficial: 
 TypeScript 7.0.2, Vite 8.2.2 e StyleX 0.19.0. O lockfile fixa a árvore de dependências.
 Integração segue a [documentação StyleX para Vite/React](https://stylexjs.com/docs/learn/installation/vite/vite-react),
 com o plugin StyleX antes do plugin React.
+
+## Perfis na aplicação
+
+`#/perfis` consulta a lista real; `#/perfis/novo` cria nome, bio, voz e os cinco valores OCEAN.
+O nome é obrigatório. Controles OCEAN aceitam 0 a 10, com passo 0,1 e explicação expansível.
+A confirmação abre os detalhes lidos novamente pela API. Recarregar preserva o perfil salvo.
+“Selecionar para sessão” leva o identificador no endereço, pronto para a etapa de abertura.
+Perfis existentes são somente leitura; a aplicação não simula edição, arquétipos ou atributos próprios.
+Uma falha mantém o formulário. Um resultado incerto bloqueia novo envio e orienta conferir a lista,
+que é atualizada ao navegar. Não há reenvio automático.
