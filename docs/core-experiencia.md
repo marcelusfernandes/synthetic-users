@@ -172,3 +172,38 @@ A confirmação abre os detalhes lidos novamente pela API. Recarregar preserva o
 Perfis existentes são somente leitura; a aplicação não simula edição, arquétipos ou atributos próprios.
 Uma falha mantém o formulário. Um resultado incerto bloqueia novo envio e orienta conferir a lista,
 que é atualizada ao navegar. Não há reenvio automático.
+
+## Sessões, envios e retomada
+
+`#/sessoes` lista sessões por criação; “Nova sessão” ou a seleção de um perfil abre o fluxo
+real de criação. `#/sessoes/{id}` retoma os turnos salvos. O interlocutor identifica a relação;
+OCEAN continua compartilhado pela sessão. O painel exibe apenas snapshots recebidos.
+
+Conversa usa `/mensagem` quando `/config` informa disponibilidade. Sem provedor, a pessoa
+pode preparar uma mensagem e alternar para eventos manuais. O catálogo vem do servidor;
+é possível ordenar eventos adicionando/removendo linhas, com intensidades de 0 a 1.
+A lista confirma os turnos e distingue eventos manuais de mensagem/narração.
+
+Rascunhos e situação do envio ficam na memória do App por sessão, inclusive ao navegar.
+Recarregar/fechar descarta rascunhos; turnos confirmados permanecem no servidor. Envios
+pendentes e incertos têm um aviso global com link para a sessão. Sem reenvio automático.
+
+Uma resposta de rede/formato inválido após POST ou erro 500 não comprova que nada foi salvo.
+A UI bloqueia outro envio, preserva a entrada e exige consultar o histórico. A pessoa precisa
+conferir o registro e confirmar que quer preparar outro turno; só então a entrada anterior é
+limpa e o envio é liberado. A leitura não cancela requisições ainda processadas. O protocolo
+atual não possui idempotência ou proteção de escrita entre abas/processos.
+
+### QA da conversa sem chamadas pagas
+
+```sh
+npm --prefix apps/frontend run build
+npm --prefix apps/frontend run qa
+```
+
+O comando imprime a URL de um servidor Python real com dados temporários e provedor HTTP
+local emulado. No terminal, `success`, `interpret-error`, `narrate-error` e `delay=1000`
+controlam o cenário. `sair` encerra os servidores e remove os dados criados pelo harness.
+O provedor retorna eventos e narrativa fixos de teste; isto não é inferência real.
+Os testes automatizados em `src/test/` usam os mesmos harnesses de `tests/`, sem substituir
+produção por mocks. O negative-control copia também esses suportes de teste para a base.

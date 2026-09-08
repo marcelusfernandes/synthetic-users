@@ -3,7 +3,7 @@ import { useEffect, useRef, type ButtonHTMLAttributes, type ReactNode } from 're
 import { s } from './styles';
 
 export function Button({ secondary, children, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { secondary?: boolean }) {
-  return <button {...stylex.props(s.button, secondary && s.secondary)} {...props}>{children}</button>;
+  return <button type="button" {...stylex.props(s.button, secondary && s.secondary)} {...props}>{children}</button>;
 }
 export function LinkButton({ href, children, light = false }: { href: string; children: ReactNode; light?: boolean }) {
   return <a href={href} {...stylex.props(s.button, light && s.light)}>{children}</a>;
