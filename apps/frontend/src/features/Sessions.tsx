@@ -1,11 +1,13 @@
-import { useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, type FormEvent } from 'react';
 import * as stylex from '@stylexjs/stylex';
-import { ApiError, type ApiClient } from '../api/client';
+import { type ApiClient } from '../api/client';
 import { useResource } from '../api/useResource';
 import type { CatalogEvent, Configuration, NewSession, Profile, SessionSummary, Turn } from '../api/types';
 import { Button, Empty, ErrorBox, formatDate, LinkButton, Loading, PageHeading } from '../ui/components';
 import { s } from '../ui/styles';
 import type { SessionDrafts } from './useSessionDrafts';
+import type { Creation } from './useCreation';
+import { CreationRecovery } from './CreationRecovery';
 
 const eventNames: Record<string, string> = {
   elogio_especifico: 'Elogio específico', humor_compartilhado: 'Humor compartilhado', vulnerabilidade_compartilhada: 'Vulnerabilidade compartilhada',
@@ -15,12 +17,12 @@ const eventNames: Record<string, string> = {
 export const eventLabel = (tipo: string) => eventNames[tipo] || tipo.replaceAll('_', ' ');
 export const displayValue = (value?: number) => value === undefined ? 'Indisponível' : value.toLocaleString('pt-BR', { maximumFractionDigits: 3 });
 
-export function Sessions({ client, profiles, sessions, sessionId, selectedProfile, config, drafts, onCreated }: {
+export function Sessions({ client, profiles, sessions, sessionId, selectedProfile, config, drafts, creation }: {
   client: ApiClient; profiles: Profile[]; sessions: SessionSummary[]; sessionId?: string;
-  selectedProfile?: string; config: Configuration; drafts: SessionDrafts; onCreated: (s: NewSession) => void;
+  selectedProfile?: string; config: Configuration; drafts: SessionDrafts; creation: Creation<{ persona_id: string }, NewSession>;
 }) {
   if (sessionId && sessionId !== 'nova') return <SessionView key={sessionId} client={client} id={sessionId} config={config} drafts={drafts} />;
-  if (sessionId === 'nova' || selectedProfile !== undefined) return <NewSessionForm key={selectedProfile || 'new'} client={client} profiles={profiles} selectedId={selectedProfile} onCreated={onCreated} />;
+  if (sessionId === 'nova' || selectedProfile !== undefined) return <NewSessionForm key={selectedProfile || 'new'} profiles={profiles} selectedId={selectedProfile} creation={creation} />;
   return <><PageHeading title="Sessões" description="Cada sessão guarda uma trajetória. Abra uma nova ou continue de onde parou." action={<LinkButton href="#/sessoes/nova">Nova sessão</LinkButton>} /><SessionList sessions={sessions} /></>;
 }
 
@@ -28,20 +30,14 @@ export function SessionList({ sessions, history = false }: { sessions: SessionSu
   return <section {...stylex.props(s.card, s.tight)}><div {...stylex.props(s.row, s.between)}><h2 {...stylex.props(s.h2)}>{history ? 'Escolha uma trajetória' : 'Sessões salvas'}</h2><span {...stylex.props(s.small, s.muted)}>Por data de criação</span></div>{!sessions.length ? <Empty title="Sua primeira sessão começa com um perfil"><p>Selecione uma personalidade para conduzir interações e acompanhar seu estado.</p><a href="#/perfis" {...stylex.props(s.link)}>Explorar perfis →</a></Empty> : <ul {...stylex.props(s.list)}>{sessions.map(item => <li key={item.id} {...stylex.props(s.listItem)}><div {...stylex.props(s.row)}><span aria-hidden="true" {...stylex.props(s.avatar)}>{(item.persona_nome || '?').slice(0, 1)}</span><div><a href={`#/${history ? 'historico' : 'sessoes'}/${item.id}`} {...stylex.props(s.link)}>{item.persona_nome || 'Perfil indisponível'} · {item.id.slice(-6)}</a><p {...stylex.props(s.small, s.muted)}>Criada em {formatDate(item.criada_em)}</p></div></div><span {...stylex.props(s.badge)}>{item.turnos} turno(s)</span></li>)}</ul>}</section>;
 }
 
-function NewSessionForm({ client, profiles, selectedId, onCreated }: { client: ApiClient; profiles: Profile[]; selectedId?: string; onCreated: (s: NewSession) => void }) {
-  const [profileId, setProfileId] = useState(selectedId || '');
-  const [pending, setPending] = useState(false), [error, setError] = useState<unknown>();
-  const lock = useRef(false), profile = profiles.find(p => p.id === profileId);
-  const uncertain = error instanceof ApiError && error.uncertain;
-  async function submit(e: FormEvent) {
-    e.preventDefault(); if (lock.current || uncertain) return;
-    if (!profile) { setError(new Error('Selecione um perfil disponível.')); return; }
-    lock.current = true; setPending(true); setError(undefined);
-    try { onCreated(await client.createSession(profile.id)); }
-    catch (e) { setError(e); }
-    finally { lock.current = false; setPending(false); }
-  }
-  return <><PageHeading title="Nova sessão" description="Escolha o perfil que receberá suas interações." /><form onSubmit={submit} noValidate aria-busy={pending} {...stylex.props(s.card, s.stack)}><label {...stylex.props(s.field)}>Perfil<select {...stylex.props(s.input)} value={profileId} onChange={e => setProfileId(e.target.value)} disabled={pending} required><option value="">Selecione um perfil</option>{profiles.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}</select></label>{profile && <div {...stylex.props(s.inset, s.tight)}><p role="status">Perfil selecionado: <strong>{profile.nome}</strong></p><p {...stylex.props(s.muted, s.wrap)}>{profile.bio || 'Sem bio informada.'}</p><a href={`#/perfis/${profile.id}`} {...stylex.props(s.link)}>Consultar personalidade base →</a></div>}{!profiles.length && <LinkButton href="#/perfis/novo">Criar primeiro perfil</LinkButton>}{!!error && <ErrorBox error={error} />}{uncertain && <p {...stylex.props(s.notice)}>O resultado é incerto. <a href="#/sessoes" {...stylex.props(s.link)}>Confira as sessões salvas</a> antes de abrir outra. Nenhum envio será repetido.</p>}<div {...stylex.props(s.row)}><Button type="submit" disabled={pending || uncertain || !profiles.length}>{pending ? 'Abrindo sessão…' : 'Abrir sessão'}</Button>{!pending && <a href="#/sessoes" {...stylex.props(s.link)}>Voltar às sessões</a>}</div><p {...stylex.props(s.small, s.muted)}>A sessão começa com os parâmetros OCEAN salvos do perfil. Você identifica o interlocutor em cada interação.</p></form></>;
+function NewSessionForm({ profiles, selectedId, creation }: { profiles: Profile[]; selectedId?: string; creation: Creation<{ persona_id: string }, NewSession> }) {
+  const { pending, error, uncertain } = creation;
+  const profileId = creation.value.persona_id;
+  const setProfileId = (persona_id: string) => creation.change({ persona_id });
+  const profile = profiles.find(p => p.id === profileId);
+  useEffect(() => { if (selectedId) creation.change({ persona_id: selectedId }); }, [selectedId]);
+  function submit(e: FormEvent) { e.preventDefault(); void creation.submit(); }
+  return <><PageHeading title="Nova sessão" description="Escolha o perfil que receberá suas interações." /><form onSubmit={submit} noValidate aria-busy={pending} {...stylex.props(s.card, s.stack)}><label {...stylex.props(s.field)}>Perfil<select {...stylex.props(s.input)} value={profileId} onChange={e => setProfileId(e.target.value)} disabled={pending || uncertain} required><option value="">Selecione um perfil</option>{profiles.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}</select></label>{profile && <div {...stylex.props(s.inset, s.tight)}><p role="status">Perfil selecionado: <strong>{profile.nome}</strong></p><p {...stylex.props(s.muted, s.wrap)}>{profile.bio || 'Sem bio informada.'}</p><a href={`#/perfis/${profile.id}`} {...stylex.props(s.link)}>Consultar personalidade base →</a></div>}{!profiles.length && <LinkButton href="#/perfis/novo">Criar primeiro perfil</LinkButton>}{!!error && <ErrorBox error={error} />}{uncertain && <CreationRecovery {...creation} href="#/sessoes" label="sessões" />}<div {...stylex.props(s.row)}><Button type="submit" disabled={pending || uncertain || !profiles.length}>{pending ? 'Abrindo sessão…' : 'Abrir sessão'}</Button>{!pending && <a href="#/sessoes" {...stylex.props(s.link)}>Voltar às sessões</a>}</div><p {...stylex.props(s.small, s.muted)}>A sessão começa com os parâmetros OCEAN salvos do perfil. Você identifica o interlocutor em cada interação.</p></form></>;
 }
 
 function SessionView({ client, id, config, drafts }: { client: ApiClient; id: string; config: Configuration; drafts: SessionDrafts }) {

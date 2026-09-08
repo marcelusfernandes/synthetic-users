@@ -7,6 +7,8 @@ Usuários Sintéticos são representações simuladas de consumidores reais, ope
 ## Novo frontend
 
 A experiência React + TypeScript + StyleX vive em `apps/frontend/`, separada da API Python.
+Ela permite criar/selecionar perfis, abrir/retomar sessões, conversar ou aplicar eventos
+manuais e inspecionar histórico/estado por interlocutor.
 Instale com `npm ci --prefix apps/frontend` (Node 22.22.3+), valide com `make test` e sirva o build:
 
 ```sh
@@ -14,7 +16,13 @@ python3 -m app.server --porta 8000 --dados /tmp/phb-core-demo --frontend apps/fr
 ```
 
 Abra `http://127.0.0.1:8000/produto/`. O laboratório clássico continua em `/`.
-[Comandos, escopo e arquitetura do core](docs/core-experiencia.md).
+[Comandos, escopo e arquitetura do core](docs/core-experiencia.md) · [Validação técnica e QA](docs/validacao-core.md).
+
+Sem provedor configurado, o modo manual continua disponível. Rascunhos e envios são
+acompanhados ao navegar; recarregar descarta rascunhos, enquanto turnos confirmados
+permanecem salvos. Para testar conversa e falhas sem chamadas pagas, use
+`npm --prefix apps/frontend run qa` após o build: o comando imprime uma URL isolada,
+com Python real, provedor HTTP local emulado e dados descartáveis.
 
 ## Estado atual — PHB v3 (motor determinístico)
 

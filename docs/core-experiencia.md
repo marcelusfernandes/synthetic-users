@@ -2,7 +2,7 @@
 
 O primeiro objetivo é concluir a jornada **perfil → sessão → interação → histórico → retomada**,
 com uma interface própria de produto sobre o motor Python atual. A proposta visual está em
-[experiencia-produto-phb.html](experiencia-produto-phb.html); a fundação do novo frontend está em `apps/frontend/`.
+[experiencia-produto-phb.html](experiencia-produto-phb.html); o frontend implementado está em `apps/frontend/`.
 
 O mantenedor confirmou o recorte e a sequência front primeiro/Python preservado na conversa
 em 07/09/2026. Depois de perguntar pelos registros do workflow, pediu “entao prossiga”.
@@ -224,3 +224,18 @@ e log sem interpretar `deltas_rel` como a diferença final entre estados.
 “Continuar sessão” conserva seu identificador e os rascunhos que ainda estão na memória da
 página. Recarregar relê o histórico salvo e seleciona a observação mais recente da última
 relação; filtros temporários não são apresentados como preferências persistidas.
+
+## Validação e recuperação de criações
+
+O [relatório de validação](validacao-core.md) registra testes, QA no navegador e limites.
+Criações de perfil/sessão também mantêm formulário, pendência e resultado incerto na memória
+do App ao navegar. A confirmação atualiza a lista por identificador, evitando duplicação
+visual quando uma leitura já encontrou o registro antes da resposta do POST.
+
+O harness de QA inclui um proxy HTTP em loopback: `drop-response` processa o POST no Python
+e descarta a resposta; `invalid-response` troca a confirmação por JSON incompleto;
+`http-400`, `http-404`, `http-500`, `http-502`, `http-503` injetam o status sem encaminhar o POST.
+`get-error`/`get-ok` controlam falhas de leitura; `pass` restaura o tráfego normal.
+`post-delay=3000` retém a resposta após o processamento, para exercitar navegação durante criação.
+`stats` mostra somente métodos/caminhos e etapas do provedor, sem corpos ou credenciais.
+Esses controles pertencem ao harness de teste e não ao produto.
