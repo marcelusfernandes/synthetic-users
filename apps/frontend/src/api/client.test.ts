@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { ApiError, createApi, parseProfile, parseSnapshot } from './client';
-import { startServer } from '../test/server';
+import { startServer } from '../../tests/server';
 
 describe('contrato com o servidor Python real', () => {
   let server: Awaited<ReturnType<typeof startServer>>;

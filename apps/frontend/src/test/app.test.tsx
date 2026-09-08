@@ -4,7 +4,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../App';
 import { createApi } from '../api/client';
-import { startServer } from './server';
+import { startServer } from '../../tests/server';
 
 let server: Awaited<ReturnType<typeof startServer>>;
 beforeAll(async () => { server = await startServer(); });

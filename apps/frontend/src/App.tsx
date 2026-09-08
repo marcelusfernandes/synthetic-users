@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import * as stylex from '@stylexjs/stylex';
 import { api, type ApiClient } from './api/client';
-import type { Configuration, Profile, SessionSummary } from './api/types';
+import type { Configuration, NewSession, Profile, SessionSummary } from './api/types';
 import { Empty, ErrorBox, formatDate, Icon, LinkButton, Loading, PageHeading } from './ui/components';
 import { s } from './ui/styles';
 import { Profiles } from './features/Profiles';
+import { Sessions } from './features/Sessions';
+import { useSessionDrafts } from './features/useSessionDrafts';
 
 export type HomeData = { profiles: Profile[]; sessions: SessionSummary[]; config: Configuration };
 const navigation = [
@@ -19,6 +21,9 @@ export function App({ client = api }: { client?: ApiClient }) {
   const [data, setData] = useState<HomeData>();
   const [error, setError] = useState<unknown>();
   const [revision, setRevision] = useState(0);
+  const drafts = useSessionDrafts(client, (id, turn) => {
+    setData(d => d ? { ...d, sessions: d.sessions.map(session => session.id === id ? { ...session, turnos: turn.turno } : session) } : d);
+  });
   useEffect(() => {
     const change = () => setRoute(window.location.hash || '#/');
     window.addEventListener('hashchange', change);
@@ -37,10 +42,14 @@ export function App({ client = api }: { client?: ApiClient }) {
   }, [client, revision, route]);
   const [path, query] = route.split('?');
   const section = path.split('/')[1] || '';
-  const selectedProfile = data?.profiles.find(p => p.id === new URLSearchParams(query).get('perfil'));
+  const selectedProfileId = new URLSearchParams(query).get('perfil') ?? undefined;
   function profileCreated(profile: Profile) {
     setData(d => d ? { ...d, profiles: [...d.profiles, profile] } : d);
     if (window.location.hash === '#/perfis/novo') window.location.hash = `#/perfis/${profile.id}`;
+  }
+  function sessionCreated(session: NewSession) {
+    setData(d => d ? { ...d, sessions: [{ ...session, persona_nome: d.profiles.find(p => p.id === session.persona_id)?.nome || null, turnos: session.turnos.length }, ...d.sessions] } : d);
+    if (window.location.hash === '#/sessoes/nova' || window.location.hash.startsWith('#/sessoes?')) window.location.hash = `#/sessoes/${session.id}`;
   }
   return <div {...stylex.props(s.page)}>
     <a href="#main" onClick={e => { e.preventDefault(); document.getElementById('main')?.focus(); }} {...stylex.props(s.skip)}>Pular para o conteúdo</a>
@@ -55,9 +64,8 @@ export function App({ client = api }: { client?: ApiClient }) {
       </aside>
       <main id="main" tabIndex={-1} {...stylex.props(s.main)}>
         <div {...stylex.props(s.topbar)}><span>WORKSPACE <span aria-hidden="true">/</span> <strong>Local</strong></span><span {...stylex.props(s.badge, data?.config.llm ? s.good : s.pink)}>{data ? data.config.llm ? 'Conversa disponível' : 'Modo manual disponível' : 'Conectando ao laboratório…'}</span></div>
-        <div {...stylex.props(s.stack)}>{error ? <ErrorBox error={error} retry={() => setRevision(r => r + 1)} /> : !data ? <Loading /> : section === '' ? <Overview data={data} /> : section === 'perfis' ? <Profiles key={path} client={client} profiles={data.profiles} selectedId={path.split('/')[2]} onCreated={profileCreated} /> : ['sessoes', 'historico'].includes(section) ? <>
+        <div {...stylex.props(s.stack)}>{Object.entries(drafts.drafts).filter(([, draft]) => draft.pending || draft.uncertain).map(([id, draft]) => <p key={id} role="status" {...stylex.props(s.notice)}>{draft.pending ? 'Envio em andamento' : 'Envio com resultado incerto'} · <a href={`#/sessoes/${id}`} {...stylex.props(s.link)}>Acompanhar sessão {id.slice(-6)} →</a></p>)}{error ? <ErrorBox error={error} retry={() => setRevision(r => r + 1)} /> : !data ? <Loading /> : section === '' ? <Overview data={data} /> : section === 'perfis' ? <Profiles key={path} client={client} profiles={data.profiles} selectedId={path.split('/')[2]} onCreated={profileCreated} /> : section === 'sessoes' ? <Sessions client={client} profiles={data.profiles} sessions={data.sessions} sessionId={path.split('/')[2]} selectedProfile={selectedProfileId} config={data.config} drafts={drafts} onCreated={sessionCreated} /> : section === 'historico' ? <>
           <PageHeading title={navigation.find(n => n.href === `#/${section}`)!.label} description="Uma etapa de cada vez, do perfil à evolução da interação." />
-          {selectedProfile && <p role="status" {...stylex.props(s.notice)}>Perfil selecionado: <strong>{selectedProfile.nome}</strong>. A abertura da sessão será habilitada na próxima etapa.</p>}
           <section {...stylex.props(s.card)}><Empty title="Esta área está em construção"><p>A fundação já está conectada ao servidor. A jornada será habilitada na próxima etapa.</p></Empty><a href="/" {...stylex.props(s.link)}>Usar o laboratório clássico ↗</a></section>
         </> : <><PageHeading title="Página não encontrada" description="Este endereço não corresponde a uma área do workspace." /><LinkButton href="#/">Voltar ao início</LinkButton></>}</div>
       </main>
