@@ -63,7 +63,7 @@ export const s = stylex.create({
   chartGrid: { stroke: colors.line, strokeWidth: 1 },
   chartLine: { fill: 'none', stroke: colors.roseInk, strokeWidth: 3, strokeLinecap: 'round', strokeLinejoin: 'round' },
   chartDot: { fill: colors.roseInk, stroke: colors.surface, strokeWidth: 2 },
-  chartText: { fill: colors.muted, fontSize: 12, fontFamily: 'inherit' },
+  chartText: { fill: colors.muted, fontSize: { default: 12, '@media (max-width: 600px)': 32 }, fontFamily: 'inherit' },
   srOnly: { position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clipPath: 'inset(50%)', whiteSpace: 'nowrap', borderWidth: 0 },
   full: { gridColumn: '1 / -1' },
   avatar: { width: 44, height: 44, flexShrink: 0, borderRadius: 14, display: 'grid', placeItems: 'center', backgroundColor: colors.peach, fontWeight: 650, fontSize: 18 },
