@@ -7,6 +7,7 @@ import { s } from './ui/styles';
 import { Profiles } from './features/Profiles';
 import { Sessions } from './features/Sessions';
 import { useSessionDrafts } from './features/useSessionDrafts';
+import { History } from './features/History';
 
 export type HomeData = { profiles: Profile[]; sessions: SessionSummary[]; config: Configuration };
 const navigation = [
@@ -64,10 +65,7 @@ export function App({ client = api }: { client?: ApiClient }) {
       </aside>
       <main id="main" tabIndex={-1} {...stylex.props(s.main)}>
         <div {...stylex.props(s.topbar)}><span>WORKSPACE <span aria-hidden="true">/</span> <strong>Local</strong></span><span {...stylex.props(s.badge, data?.config.llm ? s.good : s.pink)}>{data ? data.config.llm ? 'Conversa disponível' : 'Modo manual disponível' : 'Conectando ao laboratório…'}</span></div>
-        <div {...stylex.props(s.stack)}>{Object.entries(drafts.drafts).filter(([, draft]) => draft.pending || draft.uncertain).map(([id, draft]) => <p key={id} role="status" {...stylex.props(s.notice)}>{draft.pending ? 'Envio em andamento' : 'Envio com resultado incerto'} · <a href={`#/sessoes/${id}`} {...stylex.props(s.link)}>Acompanhar sessão {id.slice(-6)} →</a></p>)}{error ? <ErrorBox error={error} retry={() => setRevision(r => r + 1)} /> : !data ? <Loading /> : section === '' ? <Overview data={data} /> : section === 'perfis' ? <Profiles key={path} client={client} profiles={data.profiles} selectedId={path.split('/')[2]} onCreated={profileCreated} /> : section === 'sessoes' ? <Sessions client={client} profiles={data.profiles} sessions={data.sessions} sessionId={path.split('/')[2]} selectedProfile={selectedProfileId} config={data.config} drafts={drafts} onCreated={sessionCreated} /> : section === 'historico' ? <>
-          <PageHeading title={navigation.find(n => n.href === `#/${section}`)!.label} description="Uma etapa de cada vez, do perfil à evolução da interação." />
-          <section {...stylex.props(s.card)}><Empty title="Esta área está em construção"><p>A fundação já está conectada ao servidor. A jornada será habilitada na próxima etapa.</p></Empty><a href="/" {...stylex.props(s.link)}>Usar o laboratório clássico ↗</a></section>
-        </> : <><PageHeading title="Página não encontrada" description="Este endereço não corresponde a uma área do workspace." /><LinkButton href="#/">Voltar ao início</LinkButton></>}</div>
+        <div {...stylex.props(s.stack)}>{Object.entries(drafts.drafts).filter(([, draft]) => draft.pending || draft.uncertain).map(([id, draft]) => <p key={id} role="status" {...stylex.props(s.notice)}>{draft.pending ? 'Envio em andamento' : 'Envio com resultado incerto'} · <a href={`#/sessoes/${id}`} {...stylex.props(s.link)}>Acompanhar sessão {id.slice(-6)} →</a></p>)}{error ? <ErrorBox error={error} retry={() => setRevision(r => r + 1)} /> : !data ? <Loading /> : section === '' ? <Overview data={data} /> : section === 'perfis' ? <Profiles key={path} client={client} profiles={data.profiles} selectedId={path.split('/')[2]} onCreated={profileCreated} /> : section === 'sessoes' ? <Sessions client={client} profiles={data.profiles} sessions={data.sessions} sessionId={path.split('/')[2]} selectedProfile={selectedProfileId} config={data.config} drafts={drafts} onCreated={sessionCreated} /> : section === 'historico' ? <History client={client} sessions={data.sessions} sessionId={path.split('/')[2]} /> : <><PageHeading title="Página não encontrada" description="Este endereço não corresponde a uma área do workspace." /><LinkButton href="#/">Voltar ao início</LinkButton></>}</div>
       </main>
     </div>
   </div>;

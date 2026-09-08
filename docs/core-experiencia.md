@@ -207,3 +207,20 @@ controlam o cenário. `sair` encerra os servidores e remove os dados criados pel
 O provedor retorna eventos e narrativa fixos de teste; isto não é inferência real.
 Os testes automatizados em `src/test/` usam os mesmos harnesses de `tests/`, sem substituir
 produção por mocks. O negative-control copia também esses suportes de teste para a base.
+
+## Histórico e evolução
+
+`#/historico` seleciona uma sessão; `#/historico/{id}` filtra a relação e permite escolher
+um turno. Eventos preservam ordem/intensidade; texto e narrativa aparecem quando registrados.
+O gráfico usa somente snapshots do interlocutor escolhido, na ordem de seus turnos; a tabela
+acessível expõe os mesmos valores. Lacunas não viram zero nem são conectadas no gráfico.
+
+O estado relacional compara a observação anterior da mesma relação, mesmo quando outros
+interlocutores têm turnos intercalados. OCEAN é identificado como personalidade compartilhada
+da sessão observada naquele turno. Não há ponto anterior ao primeiro snapshot presumido.
+Ruptura e campos ausentes são explicitamente indisponíveis. O detalhe técnico mostra snapshot
+e log sem interpretar `deltas_rel` como a diferença final entre estados.
+
+“Continuar sessão” conserva seu identificador e os rascunhos que ainda estão na memória da
+página. Recarregar relê o histórico salvo e seleciona a observação mais recente da última
+relação; filtros temporários não são apresentados como preferências persistidas.
