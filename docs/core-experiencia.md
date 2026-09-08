@@ -7,13 +7,14 @@ com uma interface própria de produto sobre o motor Python atual. A proposta vis
 O mantenedor confirmou o recorte e a sequência front primeiro/Python preservado na conversa
 em 07/09/2026. Depois de perguntar pelos registros do workflow, pediu “entao prossiga”.
 Esse pedido originou a fase abaixo. Publicação de issues, branches e PRs está no escopo;
-merge, produção e chamadas pagas continuam dependendo de autorização específica.
+A instrução seguinte autorizou implementar o front e fazer merge quando os testes passarem,
+com um agente de QA navegando na aplicação. Produção e chamadas pagas continuam fora do escopo.
 
 ## Acompanhar no GitHub
 
 - [Milestone M3 — Core da experiência](https://github.com/marcelusfernandes/synthetic-users/milestone/3).
 - [Objetivo / issue-mãe #23](https://github.com/marcelusfernandes/synthetic-users/issues/23).
-- Integração: `main`, por PR. Permissões: `publish: yes`, `merge: no`.
+- Integração: `main`, por PR. Permissões atuais: `publish: yes`, `merge: yes`, com testes/checks aprovados e QA independente.
 - Decisor: `@marcelusfernandes`.
 
 | Tarefa | Resultado verificável | Depende de |
