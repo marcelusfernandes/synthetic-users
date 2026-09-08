@@ -1,10 +1,12 @@
-import { useRef, useState, type FormEvent } from 'react';
+import { useRef, type FormEvent } from 'react';
 import * as stylex from '@stylexjs/stylex';
-import { ApiError, type ApiClient } from '../api/client';
+import { type ApiClient } from '../api/client';
 import { useResource } from '../api/useResource';
-import { traits, traitLabels, type Ocean, type Profile } from '../api/types';
+import { traits, traitLabels, type ProfileInput, type Profile } from '../api/types';
 import { Button, Empty, ErrorBox, formatDate, LinkButton, Loading, PageHeading } from '../ui/components';
 import { s } from '../ui/styles';
+import type { Creation } from './useCreation';
+import { CreationRecovery } from './CreationRecovery';
 
 const descriptions = {
   abertura: 'Interesse por novidades e exploração.',
@@ -13,8 +15,8 @@ const descriptions = {
   amabilidade: 'Inclinação à cooperação e consideração pelo outro.',
   neuroticismo: 'Sensibilidade à tensão e a emoções negativas.',
 };
-export function Profiles({ client, profiles, selectedId, onCreated }: { client: ApiClient; profiles: Profile[]; selectedId?: string; onCreated: (p: Profile) => void }) {
-  if (selectedId === 'novo') return <ProfileForm client={client} onCreated={onCreated} />;
+export function Profiles({ client, profiles, selectedId, creation }: { client: ApiClient; profiles: Profile[]; selectedId?: string; creation: Creation<ProfileInput, Profile> }) {
+  if (selectedId === 'novo') return <ProfileForm creation={creation} />;
   if (selectedId) return <ProfileDetail key={selectedId} client={client} id={selectedId} />;
   return <>
     <PageHeading title="Perfis" description="Personalidades que dão contexto às suas interações." action={<LinkButton href="#/perfis/novo">Criar perfil <span aria-hidden="true">＋</span></LinkButton>} />
@@ -23,28 +25,26 @@ export function Profiles({ client, profiles, selectedId, onCreated }: { client: 
   </>;
 }
 
-function ProfileForm({ client, onCreated }: { client: ApiClient; onCreated: (p: Profile) => void }) {
-  const [nome, setNome] = useState(''), [bio, setBio] = useState(''), [voz, setVoz] = useState('');
-  const [ocean, setOcean] = useState<Ocean>({ abertura: 5, conscienciosidade: 5, extroversao: 5, amabilidade: 5, neuroticismo: 5 });
-  const [pending, setPending] = useState(false), [error, setError] = useState<unknown>();
-  const sending = useRef(false);
+function ProfileForm({ creation }: { creation: Creation<ProfileInput, Profile> }) {
+  const { nome, bio, voz, ocean_base: ocean } = creation.value;
+  const { pending, error, uncertain } = creation;
+  const setNome = (nome: string) => creation.change({ ...creation.value, nome });
+  const setBio = (bio: string) => creation.change({ ...creation.value, bio });
+  const setVoz = (voz: string) => creation.change({ ...creation.value, voz });
+  const setOcean = (ocean_base: ProfileInput['ocean_base']) => creation.change({ ...creation.value, ocean_base });
   const nameInput = useRef<HTMLInputElement>(null);
-  const uncertain = error instanceof ApiError && error.uncertain;
-  async function submit(e: FormEvent) {
-    e.preventDefault(); if (sending.current || uncertain) return;
-    if (!nome.trim()) { setError(new Error('Informe um nome para o perfil.')); nameInput.current?.focus(); return; }
-    sending.current = true; setPending(true); setError(undefined);
-    try { const profile = await client.createProfile({ nome: nome.trim(), bio, voz, ocean_base: ocean }); onCreated(profile); }
-    catch (e) { setError(e); }
-    finally { sending.current = false; setPending(false); }
+  function submit(e: FormEvent) {
+    e.preventDefault();
+    if (!nome.trim()) nameInput.current?.focus();
+    void creation.submit();
   }
   return <>
     <PageHeading title="Criar perfil" description="Defina a base. A experiência de cada sessão constrói o que vem depois." />
     <form onSubmit={submit} noValidate {...stylex.props(s.stack)} aria-busy={pending}>
-      <section {...stylex.props(s.card, s.stack)}><h2 {...stylex.props(s.h2)}>Identidade e expressão</h2><label {...stylex.props(s.field)}>Nome <span {...stylex.props(s.small, s.muted)}>Obrigatório</span><input ref={nameInput} {...stylex.props(s.input)} value={nome} onChange={e => setNome(e.target.value)} required disabled={pending} autoComplete="off" /></label><div {...stylex.props(s.grid)}><label {...stylex.props(s.field)}>Bio <span {...stylex.props(s.small, s.muted)}>Contexto e experiências que orientam a expressão.</span><textarea {...stylex.props(s.input, s.textarea)} value={bio} onChange={e => setBio(e.target.value)} disabled={pending} /></label><label {...stylex.props(s.field)}>Voz <span {...stylex.props(s.small, s.muted)}>Como esse perfil costuma se comunicar.</span><textarea {...stylex.props(s.input, s.textarea)} value={voz} onChange={e => setVoz(e.target.value)} disabled={pending} /></label></div><p {...stylex.props(s.small, s.muted)}>Bio e voz contextualizam o texto. Os cinco parâmetros abaixo definem a personalidade inicial do motor.</p></section>
-      <section {...stylex.props(s.card, s.stack)}><div {...stylex.props(s.row, s.between)}><h2 {...stylex.props(s.h2)}>Personalidade base</h2><span {...stylex.props(s.badge)}>OCEAN · escala de 0 a 10</span></div><details><summary {...stylex.props(s.link)}>Entender os parâmetros</summary><div {...stylex.props(s.inset, s.tight)}>{traits.map(k => <p key={k}><strong>{traitLabels[k]}.</strong> {descriptions[k]}</p>)}<p {...stylex.props(s.small, s.muted)}>Os valores descrevem uma configuração do modelo, sem diagnóstico ou julgamento sobre uma pessoa.</p></div></details><div {...stylex.props(s.grid)}>{traits.map(k => <label key={k} {...stylex.props(s.field)}><span {...stylex.props(s.row, s.between)}>{traitLabels[k]}<output htmlFor={`ocean-${k}`}>{ocean[k].toLocaleString('pt-BR')}</output></span><input id={`ocean-${k}`} aria-label={traitLabels[k]} type="range" min="0" max="10" step="0.1" value={ocean[k]} onChange={e => setOcean({ ...ocean, [k]: Number(e.target.value) })} disabled={pending} {...stylex.props(s.range)} /><span {...stylex.props(s.small, s.muted)}>0 — menor intensidade · 10 — maior intensidade</span></label>)}</div></section>
+      <section {...stylex.props(s.card, s.stack)}><h2 {...stylex.props(s.h2)}>Identidade e expressão</h2><label {...stylex.props(s.field)}>Nome <span {...stylex.props(s.small, s.muted)}>Obrigatório</span><input ref={nameInput} {...stylex.props(s.input)} value={nome} onChange={e => setNome(e.target.value)} required disabled={pending || uncertain} autoComplete="off" /></label><div {...stylex.props(s.grid)}><label {...stylex.props(s.field)}>Bio <span {...stylex.props(s.small, s.muted)}>Contexto e experiências que orientam a expressão.</span><textarea {...stylex.props(s.input, s.textarea)} value={bio} onChange={e => setBio(e.target.value)} disabled={pending || uncertain} /></label><label {...stylex.props(s.field)}>Voz <span {...stylex.props(s.small, s.muted)}>Como esse perfil costuma se comunicar.</span><textarea {...stylex.props(s.input, s.textarea)} value={voz} onChange={e => setVoz(e.target.value)} disabled={pending || uncertain} /></label></div><p {...stylex.props(s.small, s.muted)}>Bio e voz contextualizam o texto. Os cinco parâmetros abaixo definem a personalidade inicial do motor.</p></section>
+      <section {...stylex.props(s.card, s.stack)}><div {...stylex.props(s.row, s.between)}><h2 {...stylex.props(s.h2)}>Personalidade base</h2><span {...stylex.props(s.badge)}>OCEAN · escala de 0 a 10</span></div><details><summary {...stylex.props(s.link)}>Entender os parâmetros</summary><div {...stylex.props(s.inset, s.tight)}>{traits.map(k => <p key={k}><strong>{traitLabels[k]}.</strong> {descriptions[k]}</p>)}<p {...stylex.props(s.small, s.muted)}>Os valores descrevem uma configuração do modelo, sem diagnóstico ou julgamento sobre uma pessoa.</p></div></details><div {...stylex.props(s.grid)}>{traits.map(k => <label key={k} {...stylex.props(s.field)}><span {...stylex.props(s.row, s.between)}>{traitLabels[k]}<output htmlFor={`ocean-${k}`}>{ocean[k].toLocaleString('pt-BR')}</output></span><input id={`ocean-${k}`} aria-label={traitLabels[k]} type="range" min="0" max="10" step="0.1" value={ocean[k]} onChange={e => setOcean({ ...ocean, [k]: Number(e.target.value) })} disabled={pending || uncertain} {...stylex.props(s.range)} /><span {...stylex.props(s.small, s.muted)}>0 — menor intensidade · 10 — maior intensidade</span></label>)}</div></section>
       {!!error && <ErrorBox error={error} />}
-      {uncertain && <div {...stylex.props(s.notice, s.tight)}><p>Não sabemos se o perfil foi salvo. Confira a lista antes de criar outro; nenhum envio será repetido automaticamente.</p><a href="#/perfis" {...stylex.props(s.link)}>Conferir perfis salvos →</a></div>}
+      {uncertain && <CreationRecovery {...creation} href="#/perfis" label="perfis" />}
       <div {...stylex.props(s.row)}><Button type="submit" disabled={pending || uncertain}>{pending ? 'Salvando perfil…' : 'Salvar perfil'}</Button>{!pending && <a href="#/perfis" {...stylex.props(s.link)}>Voltar aos perfis</a>}<span role="status" {...stylex.props(s.small, s.muted)}>{pending ? 'Aguardando confirmação do servidor.' : ''}</span></div>
     </form>
   </>;
