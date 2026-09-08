@@ -19,8 +19,9 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 class Servidor(ThreadingHTTPServer):
     allow_reuse_address = True
 
-    def __init__(self, endereco, handler_cls, dados_dir: str):
+    def __init__(self, endereco, handler_cls, dados_dir: str, frontend_dir=None):
         self.dados_dir = dados_dir
+        self.frontend_dir = frontend_dir
         super().__init__(endereco, handler_cls)
 
 
@@ -28,11 +29,16 @@ def main(argv=None) -> None:
     ap = argparse.ArgumentParser(description="Servidor HTTP do PHB v3 (personas, sessões, turnos)")
     ap.add_argument("--porta", type=int, default=8000, help="porta TCP (0 escolhe uma livre)")
     ap.add_argument("--dados", default=REPO_ROOT, help="diretório de dados (personas/, sessoes/)")
+    ap.add_argument("--frontend", help="diretório do build do novo frontend, servido em /produto/")
     args = ap.parse_args(argv)
+
+    frontend_dir = os.path.realpath(args.frontend) if args.frontend else None
+    if frontend_dir and not os.path.isfile(os.path.join(frontend_dir, "index.html")):
+        ap.error("--frontend precisa apontar para um build com index.html")
 
     dados_dir = os.path.abspath(args.dados)
     os.makedirs(dados_dir, exist_ok=True)
-    servidor = Servidor(("127.0.0.1", args.porta), Handler, dados_dir)
+    servidor = Servidor(("127.0.0.1", args.porta), Handler, dados_dir, frontend_dir)
     porta = servidor.server_address[1]
     print(json.dumps({"porta": porta, "dados": dados_dir}), flush=True)
     try:

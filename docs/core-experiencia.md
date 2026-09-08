@@ -2,7 +2,7 @@
 
 O primeiro objetivo é concluir a jornada **perfil → sessão → interação → histórico → retomada**,
 com uma interface própria de produto sobre o motor Python atual. A proposta visual está em
-[experiencia-produto-phb.html](experiencia-produto-phb.html); o novo frontend ainda será implementado.
+[experiencia-produto-phb.html](experiencia-produto-phb.html); a fundação do novo frontend está em `apps/frontend/`.
 
 O mantenedor confirmou o recorte e a sequência front primeiro/Python preservado na conversa
 em 07/09/2026. Depois de perguntar pelos registros do workflow, pediu “entao prossiga”.
@@ -63,7 +63,7 @@ Um estado anterior ausente não é inventado a partir dos padrões do motor ou d
 A referência mais recente orienta azul-noite `#111321`, marfim `#F1F0EE`, superfícies brancas,
 coral `#E98A71`, rosa `#D95691` e pêssego `#F0D4CE`. O gradiente coral/rosa destaca a sessão
 principal, com texto escuro. Botões principais usam azul-noite; detalhes têm abertura sob demanda.
-Tokens semânticos de cor, tipografia, espaço, foco e estados serão centralizados no frontend.
+Cores estão em `src/ui/tokens.stylex.ts`; composição, tipografia, espaço e estados em `src/ui/styles.ts`.
 
 O HTML funciona offline e seus controles são uma prévia local. Os exemplos não devem virar
 fallbacks de dados na aplicação. Os campos da prévia não criam perfis nem alteram o motor.
@@ -80,11 +80,10 @@ phb/                         motor Python e calibração preservados
 contracts/http-atual.md      fronteira HTTP documentada
 ```
 
-Essa estrutura é um destino de implementação, não pastas já construídas neste PR de documentação.
+Essa estrutura separa o frontend da API existente.
 Não há necessidade de mover o backend para outra pasta ou criar pacotes compartilhados antes
-que existam consumidores reais. O novo front terá build; o servidor continua Python stdlib.
-Na transição, a interface antiga permanece disponível. A tarefa #25 documentará os comandos
-reais de desenvolvimento/build e a forma explícita de servir a nova UI.
+que existam consumidores reais. O novo front tem build; o servidor continua Python stdlib.
+Na transição, a interface antiga permanece disponível em `/`; o build é habilitado explicitamente em `/produto/`.
 
 O [contrato HTTP atual](../contracts/http-atual.md) separa o frontend do pipeline do servidor:
 interpretar → `engine_v3.step()` → narrar → persistir. No modo manual, o servidor calcula e
@@ -132,3 +131,34 @@ OCEAN, alternância de modo, preservação de rascunho e inspeção do históric
 
 Os testes e checks do PR são a evidência atual da tarefa #24. Isso não conclui o objetivo #23:
 as tarefas de implementação e validação continuam pendentes até suas próprias entregas.
+
+## Executar o novo front
+
+Requer Node 22.22.3+ para as ferramentas de desenvolvimento; o build pronto precisa apenas do servidor Python.
+
+```sh
+npm ci --prefix apps/frontend
+make test
+python3 -m app.server --porta 8000 --dados /tmp/phb-core-demo --frontend apps/frontend/dist
+```
+
+Abra `http://127.0.0.1:8000/produto/`. Use um diretório de dados separado para avaliação.
+`make test` executa motor, integração Python, typecheck, testes Vitest com servidor HTTP real e build.
+Não ignora uma árvore de testes sem executar testes nem instala dependências silenciosamente.
+
+Para desenvolvimento, inicie o Python sem `--frontend` e, em outro terminal:
+
+```sh
+npm --prefix apps/frontend run dev
+```
+
+O Vite usa base `/produto/` e encaminha `/api` para `http://127.0.0.1:8000`.
+`PHB_DEV_API` pode mudar apenas esse destino local no processo do Vite; não contém chave.
+Navegação por hash mantém links diretos e histórico do navegador sem fallback genérico do servidor.
+`npm --prefix apps/frontend run build` gera JS/CSS locais em `dist/`; StyleX extrai o CSS durante o build.
+O servidor recusa um diretório sem `index.html` e não serve arquivos fora dessa raiz, inclusive por symlinks.
+
+Versões verificadas em 07/09/2026 no registro npm e na documentação oficial: React 19.2.8,
+TypeScript 7.0.2, Vite 8.2.2 e StyleX 0.19.0. O lockfile fixa a árvore de dependências.
+Integração segue a [documentação StyleX para Vite/React](https://stylexjs.com/docs/learn/installation/vite/vite-react),
+com o plugin StyleX antes do plugin React.

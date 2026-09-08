@@ -59,5 +59,6 @@ jobs:
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          # AGENTIC_TEST_CMD: npm test
+          # Cada checkout do controle instala seu próprio lockfile, inclusive no monorepo.
+          AGENTIC_TEST_CMD: 'if [ -f apps/frontend/package-lock.json ]; then npm ci --prefix apps/frontend --no-audit --no-fund || exit 1; fi; make test'
         run: node .github/scripts/agentic/negative-control.mts --base "$BASE_SHA" --head "$HEAD_SHA"

@@ -7,11 +7,11 @@ a implementação é acompanhada pelo [objetivo #23](https://github.com/marcelus
 
 ## Comandos
 
-- `make test`: testes do motor e integração HTTP real da aplicação.
+- `make test`: motor, integração HTTP Python, typecheck, testes do front e build. Antes, `npm ci --prefix apps/frontend`.
 - `python3 -m app.server --porta 0 --dados <diretorio-isolado>`: smoke local sem tocar sessões reais.
 - `python3 phb/run_turn.py --catalogo`: catálogo de eventos do motor.
-- Node 22.18+ executa os scripts do loop. O novo frontend terá ferramentas Node próprias,
-  com versões e comandos registrados quando implementado; Node não é dependência do servidor Python.
+- Node 22.22.3+ para ferramentas do frontend e scripts do loop; Node não é dependência do servidor Python.
+- `npm --prefix apps/frontend run dev`: Vite com proxy local; `--frontend apps/frontend/dist` no Python habilita o build em `/produto/`.
 
 ## Invariantes
 

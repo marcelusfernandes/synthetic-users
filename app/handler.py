@@ -48,8 +48,8 @@ class Handler(BaseHTTPRequestHandler):
         traceback.print_exc(file=sys.stderr)
         self._erro(500, "erro interno")
 
-    def _servir_arquivo(self, caminho_relativo: str) -> None:
-        resolvido = estatico.resolver_arquivo(caminho_relativo)
+    def _servir_arquivo(self, caminho_relativo: str, diretorio=None) -> None:
+        resolvido = estatico.resolver_arquivo(caminho_relativo, diretorio)
         if resolvido is None:
             self._erro(404, "não encontrado")
             return
@@ -106,6 +106,13 @@ class Handler(BaseHTTPRequestHandler):
 
         if caminho == "/":
             self._servir_arquivo("index.html")
+        elif caminho == "/produto" or caminho.startswith("/produto/"):
+            diretorio = getattr(self.server, "frontend_dir", None)
+            if not diretorio:
+                self._erro(404, "novo frontend não habilitado")
+            else:
+                relativo = caminho.removeprefix("/produto").lstrip("/") or "index.html"
+                self._servir_arquivo(relativo, diretorio)
         elif caminho == "/api/config":
             ligado = llm.esta_configurado()
             self._json(200, {"llm": ligado, "modelo": llm.MODELO if ligado else None})
