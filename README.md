@@ -96,6 +96,7 @@ A consistência entre as três camadas valida se o agente opera dentro dos parâ
 │   ├── server.py            #   `python3 -m app.server` — CLI + ThreadingHTTPServer
 │   ├── handler.py           #   rotas da API (personas, sessões, turnos, mensagem, estáticos)
 │   ├── llm.py               #   turno com LLM opcional (interpreta em eventos, narra)
+│   ├── jev.py               #   interpretador alternativo: Jev (TypeSafe) via Decisions API do OpenRouter
 │   ├── estatico.py          #   resolve `app/static/` com segurança (mime por extensão)
 │   ├── store.py             #   persistência em JSON (personas/, sessoes/)
 │   ├── validacao.py         #   valida payloads HTTP (persona, turno)
@@ -165,7 +166,7 @@ Rotas:
 
 | Rota | Descrição |
 |---|---|
-| `GET /api/config` | `{"llm": true\|false, "modelo": "<PHB_MODEL>"\|null}` — `llm` reflete se provedor, chave e modelo estão configurados no servidor |
+| `GET /api/config` | `{"llm": true\|false, "modelo": "<PHB_MODEL>"\|null, "interpretador": "llm"\|"jev", "modelo_interpretador": "<modelo>"\|null}` — `llm` reflete se narrador **e** interpretador estão configurados no servidor |
 | `GET /api/catalogo` | Eventos do motor (`tipo`, `eixos`, `valencia`) |
 | `GET /api/personas` · `POST /api/personas` | Lista/cria personas (`nome`, `bio`, `voz`, `ocean_base`) |
 | `GET /api/personas/{id}` | Uma persona |
@@ -173,6 +174,7 @@ Rotas:
 | `GET /api/sessoes/{id}` | Persona, relações por interlocutor e turnos da sessão |
 | `POST /api/sessoes/{id}/turno` | Executa um turno (`quem`, `eventos`) via `engine_v3.step()` |
 | `POST /api/sessoes/{id}/mensagem` | Turno com LLM: interpreta `texto` em eventos, roda `step()`, narra — ver "Turno com LLM" abaixo |
+| `POST /api/sessoes/{id}/interpretar` | Só a interpretação (`quem`, `texto` → `eventos` + `interpretacao`), sem `step()` e sem persistir — comparação Jev × LLM e modo manual assistido |
 | `GET /` · `GET /static/<arquivo>` | Página e estáticos de `app/static/` (`.js` como `application/javascript`) |
 
 Personas ficam em `personas/*.json` (versionadas — `mariana.json` é a seed);
@@ -195,6 +197,20 @@ ou resposta HTTP.
 Respostas sem texto ou marcadas pelo OpenRouter como incompletas são tratadas como
 falha; o turno e seu estado não são persistidos parcialmente.
 
+Cada turno de `/mensagem` grava `interpretacao` — quem interpretou e, com o Jev, a
+trilha de decisões (probabilidade, intensidade e confiança por tipo, limiar, uso/custo).
+
+#### Interpretador Jev (`app/jev.py`, experimental)
+
+`PHB_INTERPRETADOR=jev` troca a etapa ① (mensagem → eventos) pelo
+[Jev](docs/jev-avaliacao.md), modelo type-safe da TypeSafe servido pela Decisions API
+do OpenRouter (`POST /api/alpha/decisions`, alpha): cada evento do catálogo vira uma
+pergunta tipada (`noul` para presença, `score` de 4 níveis para intensidade) e a resposta
+já vem no formato certo — sem JSON para parsear nem tipo fora do catálogo. O Jev não
+gera texto: a narração continua com o LLM de `PHB_LLM_PROVIDER`. O motor não muda.
+Sonda sem servidor: `python3 -m app.jev --perguntas "texto"` imprime o payload;
+sem `--perguntas` faz uma chamada paga e imprime a leitura.
+
 Variáveis de ambiente:
 
 | Variável | Default | Descrição |
@@ -205,7 +221,11 @@ Variáveis de ambiente:
 | `PHB_LLM_URL` | endpoint oficial do provedor | override do endpoint, inclusive para testes locais |
 | `PHB_MODEL` | `claude-sonnet-5` no Anthropic | modelo literal; obrigatório no OpenRouter, sem fallback silencioso |
 | `PHB_MAX_TOKENS` | `600` | inteiro positivo; no OpenRouter, o orçamento também pode ser consumido por reasoning |
-| `PHB_LLM_TIMEOUT` | `60` | timeout HTTP em segundos, inteiro positivo |
+| `PHB_LLM_TIMEOUT` | `60` | timeout HTTP em segundos, inteiro positivo (também usado pelo Jev) |
+| `PHB_INTERPRETADOR` | `llm` | `llm` ou `jev`; com `jev`, a interpretação usa `OPENROUTER_API_KEY` (a narração segue o provedor acima) |
+| `PHB_JEV_MODEL` | `typesafe/jev-1.13` | modelo do Jev no OpenRouter (`~typesafe/jev-latest` é o alias móvel) |
+| `PHB_JEV_URL` | `https://openrouter.ai/api/alpha/decisions` | override do endpoint da Decisions API, inclusive para testes locais |
+| `PHB_JEV_LIMIAR` | `0.5` | P(sim) mínimo para emitir um evento; `0 < x ≤ 1` |
 
 ```bash
 ANTHROPIC_API_KEY=sk-... make run   # turno com LLM habilitado
@@ -213,6 +233,10 @@ ANTHROPIC_API_KEY=sk-... make run   # turno com LLM habilitado
 # OpenRouter (exemplo de configuração; não executa chamada ao configurar)
 PHB_LLM_PROVIDER=openrouter OPENROUTER_API_KEY=... \
   PHB_MODEL=z-ai/glm-5.3-flash PHB_MAX_TOKENS=1200 make run
+
+# Jev interpreta, GLM narra (uma chave, dois endpoints do OpenRouter)
+PHB_INTERPRETADOR=jev PHB_LLM_PROVIDER=openrouter OPENROUTER_API_KEY=... \
+  PHB_MODEL=z-ai/glm-5.3-flash make run
 ```
 
 ## Como rodar um research test

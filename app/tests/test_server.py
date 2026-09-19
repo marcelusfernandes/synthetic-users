@@ -278,7 +278,7 @@ class TestConfigECatalogo(ServidorTestCase):
     def test_config(self):
         status, corpo, _ = self._get("/api/config")
         self.assertEqual(status, 200)
-        self.assertEqual(corpo, {"llm": False, "modelo": None})
+        self.assertEqual(corpo, {"llm": False, "modelo": None, "interpretador": "llm", "modelo_interpretador": None})
 
     def test_catalogo(self):
         status, corpo, _ = self._get("/api/catalogo")

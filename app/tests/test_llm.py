@@ -307,7 +307,7 @@ class TestMensagemSemChave(ServidorComStubTestCase):
     def test_config_reporta_llm_desligado(self):
         status, corpo = self._get("/api/config")
         self.assertEqual(status, 200)
-        self.assertEqual(corpo, {"llm": False, "modelo": None})
+        self.assertEqual(corpo, {"llm": False, "modelo": None, "interpretador": "llm", "modelo_interpretador": None})
 
     def test_mensagem_sem_chave_503(self):
         _, sessao = self._criar_persona_e_sessao()
@@ -403,7 +403,7 @@ class TestOpenRouterSemModelo(ServidorComStubTestCase):
 
     def test_openrouter_exige_modelo_explicito(self):
         status, corpo = self._get("/api/config")
-        self.assertEqual((status, corpo), (200, {"llm": False, "modelo": None}))
+        self.assertEqual((status, corpo), (200, {"llm": False, "modelo": None, "interpretador": "llm", "modelo_interpretador": None}))
 
 
 class TestProvedorInvalido(ServidorComStubTestCase):
@@ -411,7 +411,7 @@ class TestProvedorInvalido(ServidorComStubTestCase):
 
     def test_provedor_invalido_nao_finge_disponibilidade(self):
         status, corpo = self._get("/api/config")
-        self.assertEqual((status, corpo), (200, {"llm": False, "modelo": None}))
+        self.assertEqual((status, corpo), (200, {"llm": False, "modelo": None, "interpretador": "llm", "modelo_interpretador": None}))
 
 
 class TestChaveOpenRouterSemSelecao(ServidorComStubTestCase):
@@ -419,7 +419,7 @@ class TestChaveOpenRouterSemSelecao(ServidorComStubTestCase):
 
     def test_chave_openrouter_nao_substitui_anthropic_default(self):
         status, corpo = self._get("/api/config")
-        self.assertEqual((status, corpo), (200, {"llm": False, "modelo": None}))
+        self.assertEqual((status, corpo), (200, {"llm": False, "modelo": None, "interpretador": "llm", "modelo_interpretador": None}))
 
 
 class ChaveOpenRouterInvalidaBase:
@@ -427,7 +427,7 @@ class ChaveOpenRouterInvalidaBase:
 
     def test_chave_invalida_nao_vaza(self):
         status, config = self._get("/api/config")
-        self.assertEqual((status, config), (200, {"llm": False, "modelo": None}))
+        self.assertEqual((status, config), (200, {"llm": False, "modelo": None, "interpretador": "llm", "modelo_interpretador": None}))
         _, sessao = self._criar_persona_e_sessao()
         status, corpo = self._post(
             f"/api/sessoes/{sessao['id']}/mensagem", {"quem": "dan", "texto": "oi"},

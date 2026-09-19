@@ -13,15 +13,18 @@ agent loop do plugin `agentic-setup` (issues → worktrees → PRs revisados →
 - Variáveis de ambiente do front (`app/`): `PHB_LLM_PROVIDER=anthropic|openrouter`,
   `ANTHROPIC_API_KEY`/`OPENROUTER_API_KEY` (somente a chave selecionada liga o turno),
   `PHB_MODEL` (default `claude-sonnet-5` somente no Anthropic) e `PHB_LLM_URL`
-  (default: endpoint oficial do provedor).
+  (default: endpoint oficial do provedor). `PHB_INTERPRETADOR=jev` troca só a
+  interpretação (mensagem → eventos) pelo Jev via Decisions API do OpenRouter
+  (`app/jev.py`; `PHB_JEV_MODEL`, `PHB_JEV_URL`, `PHB_JEV_LIMIAR`); a narração segue no
+  provedor. Avaliação e contrato em `docs/jev-avaliacao.md`.
 
 ## Mapa
 
 - `phb/` — `engine_v3.py` (estado + `step()`), `config_v3_ideal.json` (calibração),
   `run_turn.py` (CLI LLM ↔ motor), `calibrar_v3.py`, `test_engine_v3.py`.
 - `app/` — o front: `server.py` (CLI + `ThreadingHTTPServer`), `handler.py` (rotas de
-  personas, sessões, turnos e mensagem), `llm.py` (turno com LLM opcional — interpreta
-  em eventos, narra), `estatico.py` (serve `app/static/` com segurança), `store.py`
+  personas, sessões, turnos, mensagem e interpretar), `llm.py` (turno com LLM opcional —
+  interpreta em eventos, narra), `jev.py` (interpretador type-safe opcional), `estatico.py` (serve `app/static/` com segurança), `store.py`
   (persistência em JSON), `validacao.py` (valida payloads HTTP), `static/` (a página),
   `tests/` (testes de integração, servidor real). `personas/` guarda as personas em
   JSON; `sessoes/` (ignorado pelo git) guarda o estado de cada sessão.

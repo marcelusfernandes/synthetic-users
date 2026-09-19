@@ -21,7 +21,7 @@ Não extrair nomes ou datas de um ID.
 
 | Método e rota | Entrada | Sucesso |
 |---|---|---|
-| `GET /api/config` | — | 200: `{llm, modelo}` |
+| `GET /api/config` | — | 200: `{llm, modelo, interpretador, modelo_interpretador}` |
 | `GET /api/catalogo` | — | 200: `{eventos: [{tipo, eixos, valencia}]}` |
 | `GET /api/personas` | — | 200: `{personas: Persona[]}` |
 | `POST /api/personas` | `CriarPersona` | 201: `Persona` |
@@ -31,6 +31,7 @@ Não extrair nomes ou datas de um ID.
 | `GET /api/sessoes/{id}` | — | 200: `{id, persona_id, persona, relacoes, turnos}` |
 | `POST /api/sessoes/{id}/turno` | `{quem, eventos}` | 200: `TurnoManual` |
 | `POST /api/sessoes/{id}/mensagem` | `{quem, texto}` | 200: `TurnoMensagem` |
+| `POST /api/sessoes/{id}/interpretar` | `{quem, texto}` | 200: `{quem, texto, eventos, interpretacao}` |
 
 `GET /` e `GET /static/<arquivo>` servem a interface legada. A tarefa #25 definirá como
 acrescentar os artefatos do novo front sem quebrar esse acesso. Não existem rotas de editar/excluir
@@ -38,7 +39,10 @@ perfil, renomear sessão, executar estudo, exportar relatório ou selecionar mod
 
 ## Configuração e catálogo
 
-`llm` é booleano. `modelo` é string quando configurado e `null` quando desabilitado.
+`llm` é booleano e significa "a rota `/mensagem` funciona": narrador **e** interpretador
+configurados. `modelo` é a string do narrador quando configurado e `null` quando desabilitado.
+`interpretador` é `"llm"` (default) ou `"jev"` (`PHB_INTERPRETADOR=jev`, [avaliação](../docs/jev-avaliacao.md));
+`modelo_interpretador` é o modelo dele (o próprio narrador no modo `llm`) ou `null`.
 Essa verificação indica configuração do servidor; não comprova que o provedor remoto está saudável.
 Nenhuma chave é retornada. A seleção de provedor/modelo continua no ambiente do servidor.
 
@@ -121,10 +125,22 @@ o novo cliente deve enviar apenas os campos documentados, sem presumir validaç�
 Não tem `texto`, `narrativa` ou timestamp próprio. A resposta é o turno adicionado, não a sessão completa.
 
 A mensagem usa `{quem, texto}`, ambos não vazios, na rota `/mensagem`.
-`TurnoMensagem` contém os campos do turno manual mais `texto` e `narrativa` (strings).
+`TurnoMensagem` contém os campos do turno manual mais `texto`, `narrativa` (strings) e
+`interpretacao` (objeto). No modo `llm`, `interpretacao` é `{interpretador: "llm", modelo}`. No modo
+`jev`, traz `interpretador: "jev"`, `modelo` servido, `limiar` e `decisoes` — um mapa de tipo do
+catálogo (exceto `neutro`) para `{probabilidade, intensidade, confianca, emitido}` — mais `uso`
+(`tokens_entrada`, `tokens_saida`, `custo_usd`, cada um número ou `null`). É trilha de auditoria,
+não entrada do motor: o painel deve preservá-la e validar só o que exibir.
 O servidor interpreta, calcula, narra e só então salva. Falha do interpretador ou do narrador retorna
 502 e não persiste aquele turno nem seu estado calculado. Sem configuração, retorna 503 antes de
-validar o corpo e procurar a sessão; o front não deve presumir outra precedência dos erros.
+validar o corpo e procurar a sessão (`LLM não configurado` sem narrador; `Jev não configurado` sem
+o interpretador Jev); o front não deve presumir outra precedência dos erros.
+
+`POST /api/sessoes/{id}/interpretar` recebe o mesmo `{quem, texto}` e devolve só a etapa de
+interpretação pelo interpretador ativo: `{quem, texto, eventos, interpretacao}`. Não roda o motor,
+não altera relações nem grava turno; serve para comparar interpretadores e para o modo manual
+assistido (a pessoa confere `eventos` e aplica em `/turno`). Exige apenas o interpretador
+configurado (com `jev`, funciona sem narrador); mesmos 400/404/502/503 da rota `/mensagem`.
 
 O modo manual funciona sem LLM. O narrador atual recebe mensagem, eventos, persona e snapshot;
 não recebe a transcrição inteira anterior. O estado acumula a trajetória, o que é diferente de
@@ -168,8 +184,8 @@ Erros conhecidos usam `{ "erro": "mensagem em português" }`.
 |---|---|---|
 | 400 | Entrada inválida ou JSON inválido nos caminhos validados | Exibir mensagem, manter entrada e permitir correção |
 | 404 | Rota, ID, perfil ou sessão ausente/inválida | Explicar ausência e permitir voltar/recarregar |
-| 502 | Falha no interpretador/narrador | Manter mensagem, informar falha; servidor não salvou o turno |
-| 503 | LLM não configurado | Oferecer modo manual; não solicitar segredo na UI |
+| 502 | Falha no interpretador/narrador (`falha ao chamar o LLM` / `falha ao chamar o Jev`) | Manter mensagem, informar falha; servidor não salvou o turno |
+| 503 | LLM não configurado / Jev não configurado | Oferecer modo manual; não solicitar segredo na UI |
 | 500 | Falha interna | Mensagem genérica, sem exibir detalhes internos |
 | Sem resposta ou JSON inesperado | Falha de conexão, resposta perdida ou contrato incompatível | Estado explícito de erro/incerteza; não exibir sucesso nem reenviar POST automaticamente |
 
@@ -198,7 +214,7 @@ fica fora do M3; o documento não certifica uma troca transparente já implement
 - [Persistência e listagem](../app/store.py).
 - [Servidor](../app/server.py) e [estáticos](../app/estatico.py).
 - [Motor e snapshot](../phb/engine_v3.py).
-- [Interpretação e narração](../app/llm.py).
+- [Interpretação e narração](../app/llm.py) e [interpretador Jev](../app/jev.py).
 
 O smoke de #24 subiu o servidor real com `--porta 0 --dados <diretório-temporário>`, com variáveis
 PHB/Anthropic/OpenRouter removidas do processo, criou um perfil fictício e verificou o exemplo

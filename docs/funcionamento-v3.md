@@ -43,6 +43,13 @@ OpenRouter também exige `PHB_MODEL`, enviado literalmente. Falhas HTTP, timeout
 respostas sem texto ou encerradas como incompletas encerram o ciclo sem persistir um turno parcial. O endpoint pode
 ser substituído por `PHB_LLM_URL` para testes locais, sem alterar o motor.
 
+A etapa ① aceita um segundo interpretador: com `PHB_INTERPRETADOR=jev`, a mensagem vai
+para o [Jev](jev-avaliacao.md) (TypeSafe, via Decisions API do OpenRouter), um modelo
+que não gera texto — responde perguntas tipadas com probabilidades. Cada evento do
+catálogo vira uma pergunta de presença (`noul`) e uma rubrica de intensidade (`score`);
+o turno grava a trilha `interpretacao` com essas probabilidades. A etapa ③ continua no
+LLM de chat; a etapa ② não muda.
+
 ---
 
 ## Os scripts construídos (`phb/`)

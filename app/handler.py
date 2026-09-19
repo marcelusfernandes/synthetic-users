@@ -3,9 +3,10 @@
 
 Cada rota chama `app.store` (persistência), no máximo `engine_v3.step`/
 `snapshot` (o motor) e, no turno com LLM (`POST .../mensagem`), `app.llm`
-(interpretar/narrar) — nenhum cálculo de eixo, OCEAN, goodwill ou ruptura
-acontece aqui (CLAUDE.md, invariante 1); o LLM só classifica e narra, nunca
-calcula. Qualquer exceção não tratada vira 500 `{"erro": ...}`; o
+(interpretar/narrar) ou, com `PHB_INTERPRETADOR=jev`, `app.jev` para
+interpretar e `app.llm` para narrar — nenhum cálculo de eixo, OCEAN,
+goodwill ou ruptura acontece aqui (CLAUDE.md, invariante 1); o LLM só
+classifica e narra, nunca calcula. Qualquer exceção não tratada vira 500 `{"erro": ...}`; o
 traceback vai para stderr, nunca para o corpo da resposta.
 """
 import json
@@ -18,12 +19,13 @@ from urllib.parse import unquote, urlsplit
 from engine_v3 import EVENTS, novo_estado, snapshot, step
 import run_turn
 
-from . import estatico, llm, store, validacao
+from . import estatico, jev, llm, store, validacao
 
 ROTA_PERSONA = re.compile(r"^/api/personas/([^/]+)$")
 ROTA_SESSAO = re.compile(r"^/api/sessoes/([^/]+)$")
 ROTA_TURNO = re.compile(r"^/api/sessoes/([^/]+)/turno$")
 ROTA_MENSAGEM = re.compile(r"^/api/sessoes/([^/]+)/mensagem$")
+ROTA_INTERPRETAR = re.compile(r"^/api/sessoes/([^/]+)/interpretar$")
 ROTA_ESTATICO = re.compile(r"^/static/(.+)$")
 
 
@@ -114,8 +116,7 @@ class Handler(BaseHTTPRequestHandler):
                 relativo = caminho.removeprefix("/produto").lstrip("/") or "index.html"
                 self._servir_arquivo(relativo, diretorio)
         elif caminho == "/api/config":
-            ligado = llm.esta_configurado()
-            self._json(200, {"llm": ligado, "modelo": llm.MODELO if ligado else None})
+            self._json(200, self._config())
         elif caminho == "/api/catalogo":
             self._json(200, {"eventos": self._catalogo()})
         elif caminho == "/api/personas":
@@ -130,6 +131,51 @@ class Handler(BaseHTTPRequestHandler):
             self._servir_arquivo(m_estatico.group(1))
         else:
             self._erro(404, "não encontrado")
+
+    # --- interpretador (llm ou jev) --------------------------------------
+
+    def _interpretador_configurado(self) -> bool:
+        return jev.esta_configurado() if jev.ativo() else llm.esta_configurado()
+
+    def _config(self) -> dict:
+        """`llm` continua significando "a rota /mensagem funciona": narrador
+        configurado E interpretador configurado. `interpretador` diz quem
+        classifica a mensagem em eventos; `modelo_interpretador` é o modelo
+        dele (o próprio narrador no modo `llm`)."""
+        narrador = llm.esta_configurado()
+        interpretador = self._interpretador_configurado()
+        ligado = narrador and interpretador
+        if jev.ativo():
+            modelo_interpretador = jev.MODELO if interpretador else None
+        else:
+            modelo_interpretador = llm.MODELO if interpretador else None
+        return {
+            "llm": ligado,
+            "modelo": llm.MODELO if narrador else None,
+            "interpretador": "jev" if jev.ativo() else "llm",
+            "modelo_interpretador": modelo_interpretador,
+        }
+
+    def _interpretar(self, texto: str, persona: dict, quem: str) -> tuple:
+        """Etapa ①: mensagem → eventos do catálogo, pelo interpretador ativo.
+        Devolve `(eventos, interpretacao)`; `interpretacao` é a trilha que
+        vai para o turno (no modo `llm`, só quem interpretou)."""
+        if jev.ativo():
+            return jev.interpretar(texto, persona, self._catalogo(), quem)
+        eventos = llm.interpretar(texto, persona, self._catalogo(), quem)
+        return eventos, {"interpretador": "llm", "modelo": llm.MODELO}
+
+    def _ler_quem_e_texto(self) -> tuple:
+        dados = self._ler_corpo_json()
+        if not isinstance(dados, dict):
+            raise validacao.ErroDeValidacao("corpo inválido: esperado um objeto JSON")
+        quem = str(dados.get("quem") or "").strip()
+        if not quem:
+            raise validacao.ErroDeValidacao("quem não pode ser vazio")
+        texto = str(dados.get("texto") or "").strip()
+        if not texto:
+            raise validacao.ErroDeValidacao("texto não pode ser vazio")
+        return quem, texto
 
     def _catalogo(self) -> list:
         return [
@@ -175,6 +221,7 @@ class Handler(BaseHTTPRequestHandler):
     def _rotear_post(self, caminho: str) -> None:
         m_turno = ROTA_TURNO.match(caminho)
         m_mensagem = ROTA_MENSAGEM.match(caminho)
+        m_interpretar = ROTA_INTERPRETAR.match(caminho)
         if caminho == "/api/personas":
             self._criar_persona()
         elif caminho == "/api/sessoes":
@@ -183,6 +230,8 @@ class Handler(BaseHTTPRequestHandler):
             self._executar_turno(m_turno.group(1))
         elif m_mensagem:
             self._executar_mensagem(m_mensagem.group(1))
+        elif m_interpretar:
+            self._executar_interpretar(m_interpretar.group(1))
         else:
             self._erro(404, "não encontrado")
 
@@ -249,24 +298,20 @@ class Handler(BaseHTTPRequestHandler):
 
     def _executar_mensagem(self, sessao_id: str) -> None:
         """`POST /api/sessoes/{id}/mensagem` — o ciclo completo com LLM:
-        interpretar a mensagem em eventos, rodar `step()` (o mesmo caminho
-        de `/turno`) e narrar o snapshot na voz da persona. 503 sem a
-        chave; 502 se o LLM falhar em qualquer uma das duas chamadas —
-        nesse caso o turno não é persistido (a sessão só é salva depois
-        que interpretar E narrar tiverem sucesso)."""
+        interpretar a mensagem em eventos (LLM ou Jev), rodar `step()` (o
+        mesmo caminho de `/turno`) e narrar o snapshot na voz da persona.
+        503 sem narrador ou sem interpretador configurado; 502 se qualquer
+        uma das duas chamadas falhar — nesse caso o turno não é persistido
+        (a sessão só é salva depois que interpretar E narrar tiverem
+        sucesso)."""
         if not llm.esta_configurado():
             self._erro(503, "LLM não configurado")
             return
+        if not self._interpretador_configurado():
+            self._erro(503, "Jev não configurado")
+            return
 
-        dados = self._ler_corpo_json()
-        if not isinstance(dados, dict):
-            raise validacao.ErroDeValidacao("corpo inválido: esperado um objeto JSON")
-        quem = str(dados.get("quem") or "").strip()
-        if not quem:
-            raise validacao.ErroDeValidacao("quem não pode ser vazio")
-        texto = str(dados.get("texto") or "").strip()
-        if not texto:
-            raise validacao.ErroDeValidacao("texto não pode ser vazio")
+        quem, texto = self._ler_quem_e_texto()
 
         dados_dir = self._dados_dir()
         doc = store.carregar_sessao(dados_dir, sessao_id)
@@ -277,8 +322,8 @@ class Handler(BaseHTTPRequestHandler):
         persona = store.carregar_persona(dados_dir, doc["persona_id"]) or {}
 
         try:
-            eventos = llm.interpretar(texto, persona, self._catalogo(), quem)
-        except llm.LLMError as e:
+            eventos, interpretacao = self._interpretar(texto, persona, quem)
+        except (llm.LLMError, jev.JevError) as e:
             self._erro(502, str(e))
             return
 
@@ -300,7 +345,37 @@ class Handler(BaseHTTPRequestHandler):
             "snapshot": snap,
             "log": log,
             "narrativa": narrativa,
+            "interpretacao": interpretacao,
         }
         doc["turnos"].append(turno)
         store.salvar_sessao(dados_dir, doc)
         self._json(200, turno)
+
+    def _executar_interpretar(self, sessao_id: str) -> None:
+        """`POST /api/sessoes/{id}/interpretar` — só a etapa ①: devolve os
+        eventos que o interpretador ativo lê na mensagem, com a trilha de
+        decisão, SEM rodar `step()` nem persistir nada. É a porta da
+        exploração (comparar Jev × LLM na mesma mensagem) e do modo manual
+        assistido: a pessoa confere os eventos sugeridos e aplica em
+        `/turno`. Funciona sem narrador — só o interpretador precisa
+        estar configurado."""
+        if not self._interpretador_configurado():
+            self._erro(503, "Jev não configurado" if jev.ativo() else "LLM não configurado")
+            return
+
+        quem, texto = self._ler_quem_e_texto()
+
+        dados_dir = self._dados_dir()
+        doc = store.carregar_sessao(dados_dir, sessao_id)
+        if doc is None:
+            self._erro(404, "sessão não encontrada")
+            return
+        persona = store.carregar_persona(dados_dir, doc["persona_id"]) or {}
+
+        try:
+            eventos, interpretacao = self._interpretar(texto, persona, quem)
+        except (llm.LLMError, jev.JevError) as e:
+            self._erro(502, str(e))
+            return
+        self._json(200, {"quem": quem, "texto": texto, "eventos": eventos,
+                         "interpretacao": interpretacao})
