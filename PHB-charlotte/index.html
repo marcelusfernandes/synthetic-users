@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PHB Charlotte</title>
+<meta name="description" content="PHB Charlotte — o laboratório de usuários sintéticos PHB como case de motion design: experimentos 001–005, o motor v3, a fundação da metodologia e todos os outputs, animados.">
+<meta name="theme-color" content="#0b0c14">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23ed9675'/%3E%3Cstop offset='1' stop-color='%23d95d9a'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='%230b0c14'/%3E%3Ccircle cx='32' cy='32' r='17' fill='none' stroke='url(%23g)' stroke-width='5'/%3E%3Ccircle cx='32' cy='32' r='6' fill='%234ed3c6'/%3E%3C/svg%3E">
+<script>
+  /* aplica tema e movimento antes de pintar, sem piscar */
+  (function () {
+    try {
+      var t = localStorage.getItem("phb-tema");
+      if (t) document.documentElement.setAttribute("data-theme", t);
+      var m = localStorage.getItem("phb-movimento");
+      if (m === "reduzido" || (!m && matchMedia("(prefers-reduced-motion: reduce)").matches)) document.documentElement.classList.add("sem-movimento");
+    } catch (e) {}
+  })();
+</script>
+<link rel="stylesheet" href="assets/css/tokens.css">
+<link rel="stylesheet" href="assets/css/base.css">
+<link rel="stylesheet" href="assets/css/componentes.css">
+<link rel="stylesheet" href="assets/css/paginas.css">
+</head>
+<body>
+<a class="pular" href="#conteudo">Pular para o conteúdo</a>
+<div class="progresso" aria-hidden="true"></div>
+
+<header class="topo">
+  <a class="marca" href="#/" aria-label="PHB Charlotte — visão geral" data-magnetico="0.2">
+    <span>PHB</span><span class="barra" aria-hidden="true">/</span><span class="nome">charlotte</span>
+  </a>
+  <div class="nav-envolto"><nav class="nav" aria-label="Principal"></nav></div>
+  <div class="acoes">
+    <button class="busca-atalho" id="botao-busca" type="button" aria-label="Buscar no acervo"><span class="rotulo">Buscar</span><kbd>/</kbd></button>
+    <button class="botao-icone" id="botao-movimento" type="button" aria-pressed="false"></button>
+    <button class="botao-icone" id="botao-tema" type="button"></button>
+    <button class="botao-icone menu-botao" id="botao-menu" type="button" aria-expanded="false" aria-controls="menu-cheio" aria-label="Menu"></button>
+  </div>
+</header>
+<nav class="menu-cheio" id="menu-cheio" aria-label="Menu" aria-hidden="true"></nav>
+
+<main id="conteudo" tabindex="-1">
+  <noscript>
+    <div class="moldura" style="padding:140px 0">
+      <h1>PHB Charlotte precisa de JavaScript.</h1>
+      <p class="lead">O site é estático, mas as páginas são montadas no navegador a partir de <code>dados/*.js</code>. Os documentos originais continuam legíveis no repositório.</p>
+    </div>
+  </noscript>
+</main>
+
+<footer class="rodape">
+  <div class="moldura">
+    <div class="pilha">
+      <p class="rodape-assina">“A porta fica onde sempre esteve — mas agora ela sabe teu nome.”</p>
+      <p class="apagado">Mariana, turno 6 do teste 005. Narrada pelo LLM; o estado por trás dela, calculado pelo motor.</p>
+    </div>
+    <div>
+      <h4>Explorar</h4>
+      <ul>
+        <li><a class="sublinha" href="#/testes">Experimentos 001–005</a></li>
+        <li><a class="sublinha" href="#/motor">O motor v3</a></li>
+        <li><a class="sublinha" href="#/laboratorio">Laboratório</a></li>
+        <li><a class="sublinha" href="#/arquivo">Todos os outputs</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>Sobre este site</h4>
+      <ul>
+        <li>Gerado de <code>synthetic-users</code> por <code>PHB-charlotte/build.py</code></li>
+        <li>HTML, CSS e JS puros · sem CDN · abre offline</li>
+        <li>Tipos: Bricolage Grotesque, Fraunces, JetBrains Mono (OFL)</li>
+        <li><a class="sublinha" href="#/doc/README.md">README do laboratório</a></li>
+      </ul>
+    </div>
+  </div>
+</footer>
+
+<div class="cortina revelando" aria-hidden="true"><span></span><span></span><div class="rotulo-cortina">PHB / charlotte</div></div>
+<div class="cursor" aria-hidden="true"><span class="cursor-rotulo"></span></div>
+
+<div class="paleta" aria-hidden="true" role="dialog" aria-label="Buscar no acervo">
+  <div class="paleta-caixa">
+    <input type="search" placeholder="Buscar em documentos, páginas e experimentos…" aria-label="Buscar" aria-controls="paleta-lista" autocomplete="off" spellcheck="false">
+    <ul class="paleta-lista" id="paleta-lista" role="listbox"></ul>
+  </div>
+</div>
+
+<script src="dados/indice.js"></script>
+<script src="dados/motor.js"></script>
+<script src="dados/series.js"></script>
+<script src="assets/js/nucleo.js"></script>
+<script src="assets/js/graficos.js"></script>
+<script src="assets/js/mente.js"></script>
+<script src="assets/js/componentes.js"></script>
+<script src="assets/js/paginas/inicio.js"></script>
+<script src="assets/js/paginas/jornada.js"></script>
+<script src="assets/js/paginas/testes.js"></script>
+<script src="assets/js/paginas/teste-002.js"></script>
+<script src="assets/js/paginas/teste-003.js"></script>
+<script src="assets/js/paginas/teste-004.js"></script>
+<script src="assets/js/paginas/teste-005.js"></script>
+<script src="assets/js/paginas/motor.js"></script>
+<script src="assets/js/paginas/laboratorio.js"></script>
+<script src="assets/js/paginas/fundacao.js"></script>
+<script src="assets/js/paginas/produto.js"></script>
+<script src="assets/js/paginas/arquivo.js"></script>
+<script src="assets/js/paginas/leitor.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

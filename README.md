@@ -109,6 +109,7 @@ A consistência entre as três camadas valida se o agente opera dentro dos parâ
 ├── modificadores/           # Sazonais, eventos de vida, contexto social
 ├── dual_class/              # Gatilhos e regras de transição entre arquétipos
 ├── exemplos/                # Instâncias .mdc — Marcelo (v1), Mariana (v2 e v3)
+├── PHB-charlotte/           # Site local (case de motion design) com todos os experimentos e outputs
 └── testes/                  # Research tests: protocolos, sessões e relatórios
     ├── templates/           # Modelos de protocolo, sessão e relatório
     └── 00N-.../             # Um diretório por experimento (001 … 005)
@@ -214,6 +215,18 @@ ANTHROPIC_API_KEY=sk-... make run   # turno com LLM habilitado
 PHB_LLM_PROVIDER=openrouter OPENROUTER_API_KEY=... \
   PHB_MODEL=z-ai/glm-5.3-flash PHB_MAX_TOKENS=1200 make run
 ```
+
+## Site local — PHB Charlotte
+
+[`PHB-charlotte/`](PHB-charlotte/) apresenta o laboratório como um case de motion design:
+os experimentos 001–005 com visualizações animadas, o motor v3, a fundação v1/v2, o produto
+e a leitura integral de todos os outputs (protocolos, sessões, auditorias, relatórios, docs
+e código). HTML/CSS/JS puros, sem CDN; abra `PHB-charlotte/index.html` no navegador ou sirva
+a raiz com `python3 -m http.server`. Os dados em `PHB-charlotte/dados/` são gerados por
+`make site` (`python3 PHB-charlotte/build.py`), que renderiza o Markdown e roda o motor real
+nos cenários do teste 004 — o navegador nunca recalcula estado.
+`python3 PHB-charlotte/build.py --check` falha se os dados estiverem desatualizados.
+Ver [`PHB-charlotte/README.md`](PHB-charlotte/README.md).
 
 ## Como rodar um research test
 

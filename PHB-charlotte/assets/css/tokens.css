@@ -1,0 +1,181 @@
+/* =========================================================================
+   PHB Charlotte — tokens
+   Fontes vendorizadas (SIL OFL 1.1), sem CDN em runtime.
+   Escuro é o padrão; claro via preferência do sistema ou data-theme.
+   ========================================================================= */
+@font-face {
+  font-family: "Bricolage";
+  src: url("../fontes/bricolage-grotesque.woff2") format("woff2-variations"),
+       url("../fontes/bricolage-grotesque.woff2") format("woff2");
+  font-weight: 200 800;
+  font-stretch: 75% 100%;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Fraunces";
+  src: url("../fontes/fraunces-italic.woff2") format("woff2-variations"),
+       url("../fontes/fraunces-italic.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("../fontes/jetbrains-mono.woff2") format("woff2-variations"),
+       url("../fontes/jetbrains-mono.woff2") format("woff2");
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: dark;
+
+  /* ---- tipografia: interface · voz humana · motor ---- */
+  --f-ui: "Bricolage", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --f-voz: "Fraunces", "Iowan Old Style", Georgia, serif;
+  --f-motor: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --t-mega: clamp(3rem, 8.6vw, 8.2rem);
+  --t-giga: clamp(2.6rem, 7vw, 6.2rem);
+  --t-h1: clamp(2.2rem, 5.2vw, 4.4rem);
+  --t-h2: clamp(1.7rem, 3.4vw, 2.9rem);
+  --t-h3: clamp(1.2rem, 2vw, 1.55rem);
+  --t-corpo: 1.0625rem;
+  --t-peq: 0.875rem;
+  --t-mini: 0.75rem;
+
+  /* ---- cor (escuro) ---- */
+  --fundo: #0b0c14;
+  --fundo-2: #10111c;
+  --sup: #151624;
+  --sup-2: #1c1e2f;
+  --sup-3: #25283c;
+  --linha: rgba(241, 240, 238, 0.09);
+  --linha-forte: rgba(241, 240, 238, 0.18);
+  --tinta: #f1f0ee;
+  --tinta-2: #b9bbc9;
+  --tinta-3: #80839a;
+  --inverso: #0b0c14;
+
+  --coral: #ef9277;
+  --rosa: #e0609b;
+  --pessego: #f0d4ce;
+  --motor: #4ed3c6;
+  --motor-2: #2aa89c;
+  --llm: #ef9277;
+  --gradiente: linear-gradient(112deg, #ed9675 0%, #e27783 50%, #d95d9a 100%);
+  --gradiente-motor: linear-gradient(112deg, #4ed3c6 0%, #6aa8f0 100%);
+
+  /* eixos relacionais */
+  --e-warmth: #f5a26b;
+  --e-confianca: #4ed3c6;
+  --e-respeito: #a99bf5;
+  --e-irritacao: #ff5c7a;
+  --e-vigilancia: #f2c14e;
+  --e-goodwill: #7bd88f;
+  --e-exposicao: #f0d4ce;
+
+  /* veredictos */
+  --ok: #7bd88f;
+  --parcial: #f2c14e;
+  --falha: #ff6b81;
+
+  --sombra: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 24px 60px -30px rgba(0, 0, 0, 0.8);
+  --sombra-forte: 0 40px 120px -40px rgba(0, 0, 0, 0.9);
+  --grao: 0.06;
+
+  /* ---- forma ---- */
+  --r-1: 10px;
+  --r-2: 18px;
+  --r-3: 28px;
+  --r-pilula: 999px;
+  --largura: 1240px;
+  --calha: clamp(16px, 4vw, 40px);
+
+  /* ---- movimento ----
+     Os tempos derivam do motor: construir é lento, destruir é ~2.4× mais rápido
+     (neg_scale 2.70 / pos_scale 1.13 na config ideal → 620 ms / 260 ms). */
+  --e-saida: cubic-bezier(0.16, 1, 0.3, 1);
+  --e-entrada: cubic-bezier(0.7, 0, 0.84, 0);
+  --e-mola: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --e-suave: cubic-bezier(0.45, 0, 0.55, 1);
+  --d-construir: 620ms;
+  --d-destruir: 260ms;
+  --d-rapido: 180ms;
+  --d-medio: 420ms;
+  --d-lento: 900ms;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    color-scheme: light;
+    --fundo: #f1f0ee;
+    --fundo-2: #ebe9e5;
+    --sup: #ffffff;
+    --sup-2: #f7f6f3;
+    --sup-3: #eceae6;
+    --linha: rgba(19, 21, 37, 0.1);
+    --linha-forte: rgba(19, 21, 37, 0.2);
+    --tinta: #131525;
+    --tinta-2: #4f5063;
+    --tinta-3: #787a8c;
+    --inverso: #f1f0ee;
+    --coral: #c85a3c;
+    --rosa: #b83a74;
+    --pessego: #a4523f;
+    --motor: #0b7f74;
+    --motor-2: #0a6f66;
+    --llm: #c85a3c;
+    --e-warmth: #c8641f;
+    --e-confianca: #0b7f74;
+    --e-respeito: #5b49c9;
+    --e-irritacao: #d02750;
+    --e-vigilancia: #9a6c00;
+    --e-goodwill: #25864a;
+    --e-exposicao: #a4523f;
+    --ok: #25864a;
+    --parcial: #9a6c00;
+    --falha: #c7263f;
+    --sombra: 0 1px 2px rgba(19, 21, 37, 0.05), 0 24px 50px -30px rgba(19, 21, 37, 0.35);
+    --sombra-forte: 0 40px 100px -40px rgba(19, 21, 37, 0.45);
+    --grao: 0.035;
+  }
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --fundo: #f1f0ee;
+  --fundo-2: #ebe9e5;
+  --sup: #ffffff;
+  --sup-2: #f7f6f3;
+  --sup-3: #eceae6;
+  --linha: rgba(19, 21, 37, 0.1);
+  --linha-forte: rgba(19, 21, 37, 0.2);
+  --tinta: #131525;
+  --tinta-2: #4f5063;
+  --tinta-3: #787a8c;
+  --inverso: #f1f0ee;
+  --coral: #c85a3c;
+  --rosa: #b83a74;
+  --pessego: #a4523f;
+  --motor: #0b7f74;
+  --motor-2: #0a6f66;
+  --llm: #c85a3c;
+  --e-warmth: #c8641f;
+  --e-confianca: #0b7f74;
+  --e-respeito: #5b49c9;
+  --e-irritacao: #d02750;
+  --e-vigilancia: #9a6c00;
+  --e-goodwill: #25864a;
+  --e-exposicao: #a4523f;
+  --ok: #25864a;
+  --parcial: #9a6c00;
+  --falha: #c7263f;
+  --sombra: 0 1px 2px rgba(19, 21, 37, 0.05), 0 24px 50px -30px rgba(19, 21, 37, 0.35);
+  --sombra-forte: 0 40px 100px -40px rgba(19, 21, 37, 0.45);
+  --grao: 0.035;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}

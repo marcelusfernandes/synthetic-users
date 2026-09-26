@@ -28,6 +28,8 @@ agent loop do plugin `agentic-setup` (issues → worktrees → PRs revisados →
 - `exemplos/`, `arquetipos/`, `padroes_compra/`, `modificadores/`, `dual_class/`,
   `pesquisas/` — a fundação da metodologia (v1/v2) em Markdown/`.mdc`.
 - `docs/` — documento norte, guia técnico v3, aprendizados. `testes/` — os experimentos.
+- `PHB-charlotte/` — site local estático (case de motion design) sobre todo o acervo;
+  `make site` regenera `PHB-charlotte/dados/*.js` rodando o motor real (o site só anima).
 
 ## Invariantes (o reviewer cobra cada PR por estas)
 

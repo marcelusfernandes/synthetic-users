@@ -1,4 +1,4 @@
-.PHONY: test test-frontend run
+.PHONY: test test-frontend run site
 test:
 	python3 phb/test_engine_v3.py
 	@# descoberta, não enumeração: o negative-control do loop copia só arquivos de
@@ -13,3 +13,7 @@ test-frontend:
 
 run:
 	python3 -m app.server
+
+# site local PHB Charlotte: regenera PHB-charlotte/dados/*.js a partir do repositório
+site:
+	python3 PHB-charlotte/build.py
